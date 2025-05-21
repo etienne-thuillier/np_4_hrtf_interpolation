@@ -1,0 +1,10 @@
+run:
+  dir: ${paths.sessions}/${paths.experiment}
+sweep:
+  dir: ${paths.sessions}/${paths.experiment}
+  subdir: ${hydra.job.num}
+
+job_logging:
+  handlers:
+    file:
+      filename: ${hydra:runtime.output_dir}/job.log

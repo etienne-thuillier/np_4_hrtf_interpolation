@@ -1,0 +1,13 @@
+
+metrics:
+  _target_: factories.misc.make_metrics
+  metrics:
+    - per-feature negative log-likelihood
+    - per-feature relative error (dB)
+    - per-feature log-mag distance (dB)
+  exclude_context_points_from_metrics: true
+  metric_reduction: mean
+
+per_feature_metrics:
+  _target_: experiments.utils.make_per_feature_metrics
+  metrics: ${..metrics.metrics}

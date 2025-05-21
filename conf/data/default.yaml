@@ -1,0 +1,66 @@
+
+max_observation_count: 100
+sample_rate: 33075
+
+dataloader_factory:
+  _target_: dataloader.sofa_dataloader
+  _partial_: true
+
+  sofa_dir: ${paths.data}/sofa
+  sofa_sets:
+    - hutubs_simulated      # data from https://sofacoustics.org/data/database/hutubs
+
+  transforms: ???
+
+  num_workers: 0
+  pin_memory: false
+  prefetch_factor: null
+  persistent_workers: false
+  multiprocessing_context: null
+
+splits:
+
+  train:
+    cardinality: ${times:${callbacks.evaluation.period},${..test.cardinality}}
+    seed: ${plus:${seed},1000}
+    batch_size: 8
+    shuffle: true
+    drop_last: true
+  valid:
+    cardinality: ${..test.cardinality}
+    seed: ${plus:${seed},2000}
+    batch_size: ${..train.batch_size}
+    shuffle: false
+    drop_last: false
+  test:
+    cardinality: ${times:4,85}       # four interpolation tasks per train set subjects (which numbers 85)
+                                     # NB: this defines the number of examples in one "epoch"
+    seed: ${plus:${seed},3000}
+    batch_size: ${..train.batch_size}
+    shuffle: false
+    drop_last: false
+
+transforms:
+  _target_: dataloader.make_transform_chain_4_train_and_eval
+  _partial_: true
+  target_sample_rate: ${data.sample_rate}
+  n_taps: 192 # ***
+  group_delay_frequency_range:
+    - 0
+    - 1100
+  statistics: ???
+  spherical_integration_weights: 'identity'
+  p_permute_ears: ??? # 0.5
+  observation_count: ???
+  min_observation_count: ???
+  max_observation_count: ${data.max_observation_count}
+  p_bernouilli_mask: ??? # 0.5
+  uniform_s2_grids:
+    _target_: dataloader.from_pickle_file
+    data_path: ${paths.data}/uniform_s2_grids.pickle
+
+transforms_4_statistics:
+  _target_: dataloader.make_transform_chain_4_statistics
+  target_sample_rate: ${data.transforms.target_sample_rate}
+  n_taps: ${data.transforms.n_taps}
+  group_delay_frequency_range: ${data.transforms.group_delay_frequency_range}

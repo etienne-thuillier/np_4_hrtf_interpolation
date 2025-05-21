@@ -1,0 +1,31 @@
+_target_: factories.sconvcnp.sconvcnp_factory
+_partial_: true
+max_context_datapoint_count: ${data.max_observation_count}
+input_features:
+  complex_envelope: 1.0
+resolution: 64
+input_set_convolution_kwargs:
+  share_scale_across_data_and_density: true
+  use_isotropic_scale_in_complex_plane: true
+  share_scale_across_sequence: false
+  share_scale_across_channels: true
+layers_per_block: 1                         # in [1, 2]
+features: 128
+n_blocks: 5
+learnable_swsh_params: 16
+filter_taps: 7
+latent_set_convolution_kwargs:
+  return_density: false
+  share_scale_across_data_and_density: null
+  use_isotropic_scale_in_complex_plane: true
+  share_scale_across_sequence: true
+  share_scale_across_channels: true
+mlp_layers: 5
+sigma_floor: 1e-3
+isotropic_complex_noise: false
+rematerialize: false
+swap_ipsi_contra: true
+mlp_block_type: residual                      # in ['simple', 'residual']
+hermitian_padding: false
+input_preprocessing: centered                 # in ['identity', 'centered', 'normalised']
+noise_mode: heteroskedastic                   # in ['fixed:sigma=0.1', 'homoskedastic', 'heteroskedastic']

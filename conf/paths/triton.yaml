@@ -1,0 +1,4 @@
+data: /scratch/work/thuille1/datasets
+sessions: /scratch/work/thuille1/sessions/np_4_hrtf_interpolation
+experiment: ${now:%Y%m%d%H%M%S}
+workdir: ${hydra:runtime.output_dir}

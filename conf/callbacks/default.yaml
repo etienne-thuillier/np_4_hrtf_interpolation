@@ -1,0 +1,30 @@
+evaluation:
+  period: 20
+  checkpoint_manager:
+    _target_: callbacks.TopKCheckpointManager
+    ckpt_dir: ${paths.workdir}/checkpoints
+    k: 10
+    metric: 'per-feature negative log-likelihood'
+    maximize: false
+
+metric vs sample count:
+  period: 120
+  sample_count_step: 5
+
+#plot examples:
+#  period: 250
+#  sample_counts:
+#    - 0
+#    - 5
+#    - 10
+#    - 20
+#    - 40
+#    - 80
+
+evaluate uncertainty miscalibration:
+  period: ${..evaluation.period}
+  feature_decimating_factors:
+    - 8
+    - 1
+    - 1
+    - 1

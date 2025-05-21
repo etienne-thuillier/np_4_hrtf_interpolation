@@ -1,0 +1,4 @@
+_target_: factories.barycentric.barycentric_factory
+_partial_: true
+input_preprocessing: centered
+noise_mode: heteroskedastic

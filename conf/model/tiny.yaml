@@ -1,0 +1,11 @@
+defaults:
+  - default
+  - _self_
+
+resolution: 16
+layers_per_block: 1
+features: 4
+n_blocks: 2
+learnable_swsh_params: 4
+filter_taps: 3
+mlp_layers: 2

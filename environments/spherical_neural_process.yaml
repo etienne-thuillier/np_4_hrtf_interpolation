@@ -1,0 +1,25 @@
+name: spherical_neural_process
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python<=3.11
+  - matplotlib<=3.8.4
+  - numpy<=1.26
+  - sympy
+  - tensorboard
+  - matplotlib
+  - cmake
+  - pip
+  - pip:
+     - torch
+     - torchvision
+     - torchaudio
+     - jax[cuda12]
+     - hydra-core
+     - flatdict
+     - tensorboard-plugin-profile
+     - flax
+     - clu>=0.0.6
+     - ml_collections>=0.1.0
+     - sofar

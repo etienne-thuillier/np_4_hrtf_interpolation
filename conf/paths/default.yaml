@@ -1,0 +1,4 @@
+data: /Users/etiennethuillier/Projects/datasets
+sessions: /Users/etiennethuillier/Sessions
+experiment: ${now:%Y%m%d%H%M%S}
+workdir: ${hydra:runtime.output_dir}

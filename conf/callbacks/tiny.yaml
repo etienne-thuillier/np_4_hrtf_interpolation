@@ -1,0 +1,18 @@
+defaults:
+  - default
+  - _self_
+
+evaluation:
+  period: 1
+  checkpoint_manager:
+    k: 2
+
+metric vs sample count:
+  period: 1
+  sample_count_step: 50
+
+#plot examples from validation set:
+#  period: 1
+
+evaluate uncertainty miscalibration:
+  period: 1

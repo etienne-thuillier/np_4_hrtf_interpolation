@@ -1,0 +1,16 @@
+defaults:
+  - _self_
+  - jax: default
+  - hydra: default
+  - paths: default
+  - data: default
+  - model: default
+  - trainer: default
+  - optimizer: default
+  - metrics: default
+  - callbacks: default
+
+seed: 42
+
+
+

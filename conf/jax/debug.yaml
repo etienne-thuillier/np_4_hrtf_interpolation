@@ -1,0 +1,2 @@
+jax_debug_nans: true
+jax_disable_jit: true

@@ -1,0 +1,14 @@
+defaults:
+  - default
+  - _self_
+
+splits:
+  train:
+    cardinality: 5
+    batch_size: 2
+  valid:
+    cardinality: 4
+    batch_size: 2
+  test:
+    cardinality: 5
+    batch_size: 2
