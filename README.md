@@ -62,7 +62,7 @@ conda env create -f environments/spherical_neural_process.yaml
 ```
 
 ## Train
-Command-line calls are customisable following [Hydra](https://hydra.cc) idioms.
+Command-line calls are customisable following [Hydra](https://hydra.cc) syntax.
 Configuration files are located in the ```conf``` folder.
 
 To train with the SConvCNP model under the published (i.e. default) configuration, run 
