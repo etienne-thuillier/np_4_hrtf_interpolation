@@ -6,7 +6,7 @@ This repository includes a refactored version of the code used for the experimen
 It includes the **Spherical Convolutional Conditional Neural Process** (SConvCNP) model introduced in the paper
 and the **barycentric interpolation** baseline.
 
-## Installation
+## Install
 
 ### Source code
 
@@ -83,9 +83,9 @@ To improve debugging using non-jit-compiled code, run
 python3 train.py trainer=tiny data=tiny callbacks=tiny model=tiny jax=debug
 ```
 
-## Evaluate
+## Evaluate (! Under Construction)
 
-#### SConvCNP
+### SConvCNP
 
 Download the pre-trained weights ***** under construction!
 ```
@@ -101,7 +101,7 @@ Inspect the result
 tensorboard --logdir=<your sessions directory here>/*********
 ```
 
-#### Barycentric interpolation (baseline)
+### Barycentric interpolation (baseline)
 ```
 python3 test.py model=barycentric jax.jax_disable_jit=true +checkpoint=null
 ```
