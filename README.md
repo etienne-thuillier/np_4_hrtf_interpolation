@@ -1,7 +1,10 @@
 # HRTF Interpolation Using a Spherical Neural Process Meta-Learner
 
-This repository includes a refactored version of the code used for the experiments published in
-[HRTF Interpolation Using a Spherical Neural Process Meta-Learner](https://ieeexplore.ieee.org/document/10418851).
+This repository contains the official code for our paper:
+
+> [**HRTF Interpolation Using a Spherical Neural Process Meta-Learner**](https://ieeexplore.ieee.org/document/10418851)  
+> Etienne Thuillier, Craig T. Jin, Vesa Välimäki  
+> *IEEE/ACM Transactions on Audio, Speech, and Language Processing, 2024*
 
 It includes the **Spherical Convolutional Conditional Neural Process** (SConvCNP) model introduced in the paper
 and the **barycentric interpolation** baseline.
@@ -109,3 +112,23 @@ This will create a new experiment folder in ```<your sessions directory here>```
 
 Note that the implementation of this baseline was carried-out with accuracy in mind, not efficiency.
 The approach is suboptimal in terms of computational complexity.
+
+
+## License
+
+This project is licensed under the MIT License.
+
+## 📖 Citation
+
+If you use this code or dataset in your research, please cite:
+
+```bibtex
+@article{thuillier2024hrtf,
+  author={Thuillier, Etienne and Jin, Craig T. and Välimäki, Vesa},
+  journal={IEEE/ACM Transactions on Audio, Speech, and Language Processing},
+  title={HRTF Interpolation Using a Spherical Neural Process Meta-Learner},
+  year={2024},
+  volume={32},
+  pages={1790--1802},
+  doi={10.1109/TASLP.2024.3361377}
+}
