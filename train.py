@@ -149,7 +149,7 @@ def train_step_sanity_check_output(mu, sigma):
     check(sigma)
 
 
-def train_one_epoch(jit_decorator, state, steps_per_epoch, train_iter, reduce_loss, train_L, train_metrics,
+def train_one_epoch(state, steps_per_epoch, train_iter, reduce_loss, train_L, train_metrics,
                     train_writer, is_profiled, clip_grads):
 
     for _ in range(steps_per_epoch):
@@ -160,18 +160,18 @@ def train_one_epoch(jit_decorator, state, steps_per_epoch, train_iter, reduce_lo
 
         # assert isinstance(train_metrics, dict) or isinstance(train_metrics, DictConfig)
 
-        metrics, state = jit_decorator(train_step, static_argnums=(8, 9, 10, 11))(state=state,
-                                                                                  mask=mask,
-                                                                                  w=w,
-                                                                                  x_c=x_c,
-                                                                                  y_c=y_c,
-                                                                                  mu_data=mu_data,
-                                                                                  sigma_data=sigma_data,
-                                                                                  rng=key,
-                                                                                  L=train_L,
-                                                                                  metrics=FrozenConfigDict(train_metrics),
-                                                                                  reduce_loss=reduce_loss,
-                                                                                  clip_grads=clip_grads)
+        metrics, state = jax.jit(train_step, static_argnums=(8, 9, 10, 11))(state=state,
+                                                                            mask=mask,
+                                                                            w=w,
+                                                                            x_c=x_c,
+                                                                            y_c=y_c,
+                                                                            mu_data=mu_data,
+                                                                            sigma_data=sigma_data,
+                                                                            rng=key,
+                                                                            L=train_L,
+                                                                            metrics=FrozenConfigDict(train_metrics),
+                                                                            reduce_loss=reduce_loss,
+                                                                            clip_grads=clip_grads)
         if is_profiled:
             tree_map(lambda z: z.block_until_ready(), metrics)
             tree_map(lambda z: z.block_until_ready(), state.params)
@@ -188,7 +188,7 @@ def train_one_epoch(jit_decorator, state, steps_per_epoch, train_iter, reduce_lo
     return state.replace(epoch=state.epoch + 1)
 
 
-def train(workdir, jit_decorator, rng, steps_per_epoch, model_factory, optimizer_hyperparameters, optimizer_factory,
+def train(workdir, rng, steps_per_epoch, model_factory, optimizer_hyperparameters, optimizer_factory,
           train_metrics, train_iterable, reduce_loss, callbacks, train_writer, epochs, profiler_epochs, train_L, clip_grads):
     """ ... """
 
@@ -226,8 +226,7 @@ def train(workdir, jit_decorator, rng, steps_per_epoch, model_factory, optimizer
 
             with jax.profiler.trace(log_dir=os.path.join(workdir, 'profiler')):
 
-                state = train_one_epoch(jit_decorator=jit_decorator,
-                                        state=state, steps_per_epoch=steps_per_epoch,
+                state = train_one_epoch(state=state, steps_per_epoch=steps_per_epoch,
                                         train_iter=train_iterable, reduce_loss=reduce_loss,
                                         train_L=train_L, train_metrics=train_metrics,
                                         train_writer=train_writer, is_profiled=True,
@@ -235,8 +234,7 @@ def train(workdir, jit_decorator, rng, steps_per_epoch, model_factory, optimizer
 
         else:
 
-            state = train_one_epoch(jit_decorator=jit_decorator,
-                                    state=state, steps_per_epoch=steps_per_epoch,
+            state = train_one_epoch(state=state, steps_per_epoch=steps_per_epoch,
                                     train_iter=train_iterable, train_L=train_L, train_metrics=train_metrics,
                                     train_writer=train_writer, is_profiled=False, reduce_loss=reduce_loss,
                                     clip_grads=clip_grads)
@@ -298,14 +296,12 @@ def main(cfg : DictConfig) -> None:
                                eval_key=valid_key,
                                metrics=metrics,
                                writer=valid_writer,
-                               jit_decorator=jax.jit,
                                statistics=statistics,
                                split='valid')
 
     train_iterable, steps_per_epoch = make_train_set_loader()
 
     train(workdir=cfg.paths.workdir,
-          jit_decorator=jax.jit,
           rng=rng,
           train_iterable=train_iterable,
           steps_per_epoch=steps_per_epoch,

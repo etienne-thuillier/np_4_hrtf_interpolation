@@ -39,7 +39,7 @@ def filter_callback(state, callback, period, tag=None):
         pass
 
 
-def evaluate(rng, eval_iter, state, L, metrics, jit_decorator):
+def evaluate(rng, eval_iter, state, L, metrics):
 	""" predicts and evaluate metrics, returning a scalar per batch element """
 
 	def f(key, mask, x, y, mu_data, sigma_data):
@@ -58,8 +58,7 @@ def evaluate(rng, eval_iter, state, L, metrics, jit_decorator):
 
 		sample_rng, rng = jax.random.split(rng, 2)
 
-		mu, sigma, _ = jit_decorator(f)(key=sample_rng, mask=mask, x=x, y=y, mu_data=mu_data,
-										sigma_data=sigma_data)
+		mu, sigma, _ = jax.jit(f)(key=sample_rng, mask=mask, x=x, y=y, mu_data=mu_data, sigma_data=sigma_data)
 
 		m_ = {key: metric(w=w, mask=mask, y=y, mu=mu, sigma=sigma) for key, metric in metrics.items()}
 
@@ -72,9 +71,9 @@ def evaluate(rng, eval_iter, state, L, metrics, jit_decorator):
 	return m
 
 
-def log_evaluation(state, rng, writer, eval_iter, L, metrics, checkpoint_manager, jit_decorator):
+def log_evaluation(state, rng, writer, eval_iter, L, metrics, checkpoint_manager):
 
-	m = evaluate(rng=rng, eval_iter=eval_iter, state=state, L=L, metrics=metrics, jit_decorator=jit_decorator)
+	m = evaluate(rng=rng, eval_iter=eval_iter, state=state, L=L, metrics=metrics)
 
 	metric_means = {key: value.mean().item() for key, value in flatten_dictionary(m).items()}
 
@@ -101,7 +100,7 @@ def log_evaluation(state, rng, writer, eval_iter, L, metrics, checkpoint_manager
 
 
 def evaluate_uncertainty_miscalibration__helper(state, key, writer, eval_iter, n_bins,
-                                                feature_decimating_factors, eval_batch, jit_decorator):
+                                                feature_decimating_factors, eval_batch):
 	rng = key
 
 	assert np.log2(n_bins) == int(np.log2(n_bins))
@@ -224,8 +223,8 @@ def evaluate_uncertainty_miscalibration__helper(state, key, writer, eval_iter, n
 
 		sample_rng, rng = jax.random.split(rng, 2)
 
-		mu_, sigma_ = jit_decorator(f)(key=sample_rng, mask=mask, x=x, y=y_,
-									   mu_data=mu_data_, sigma_data=sigma_data_)
+		mu_, sigma_ = jax.jit(f)(key=sample_rng, mask=mask, x=x, y=y_,
+								 mu_data=mu_data_, sigma_data=sigma_data_)
 
 		# TODO: map to error space here?
 		# y_ = FLAGS.config.to_error_space(y_)
@@ -319,10 +318,10 @@ def evaluate_uncertainty_miscalibration__helper(state, key, writer, eval_iter, n
 	return rmv_rmse_
 
 
-def evaluate_at_sample_counts(rng, state, L, metrics, count_2_dataset, jit_decorator):
+def evaluate_at_sample_counts(rng, state, L, metrics, count_2_dataset):
 	""" note, this only works with mask_generator == draw_uniform_s2_grid_wrapper """
 
-	f = partial(evaluate, rng=rng, state=state, L=L, metrics=metrics, jit_decorator=jit_decorator)
+	f = partial(evaluate, rng=rng, state=state, L=L, metrics=metrics)
 
 	m = None
 	for sample_count, dataset in count_2_dataset.items():
@@ -340,14 +339,13 @@ def evaluate_at_sample_counts(rng, state, L, metrics, count_2_dataset, jit_decor
 	return [int(sample_count) for sample_count in count_2_dataset.keys()], m
 
 
-def plot_metrics_vs_sample_count(state, key, L, metrics, count_2_dataset_iterables, images_writer, jit_decorator):
+def plot_metrics_vs_sample_count(state, key, L, metrics, count_2_dataset_iterables, images_writer):
 
 	sample_counts, metrics = evaluate_at_sample_counts(rng=key,
                                                        state=state,
                                                        L=L,
                                                        metrics=metrics,
-                                                       count_2_dataset=count_2_dataset_iterables,
-													   jit_decorator=jit_decorator)
+                                                       count_2_dataset=count_2_dataset_iterables)
 
 	images = make_metric_vs_sample_count_graph(sample_counts=sample_counts, metrics=metrics)
 

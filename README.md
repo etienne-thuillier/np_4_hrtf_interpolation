@@ -10,6 +10,11 @@ It includes an implementations of
 - the Spherical Convolutional Conditional Neural Process (**SConvCNP**) model proposed in the paper, and
 - the **barycentric interpolation** baseline.
 
+It relies on Esteves et al.'s Spin Spherical CNN
+> [Spin-weighted spherical CNNs](https://proceedings.neurips.cc/paper/2020/hash/6217b2f7e4634fa665d31d3b4df81b56-Abstract.html)
+> C. Esteves, A. Makadia, and K. Daniilidis
+> NeuRIPS Processdings, 2020
+
 
 ## Install
 
@@ -33,7 +38,7 @@ Clone *np_4_hrtf_interpolation* (this repo):
 git clone https://github.com/etienne-thuillier/np_4_hrtf_interpolation.git
 ```
 
-Link *spin_spherical_cnns* as a subfolder into *np_4_hrtf_interpolation*:
+Link *spin_spherical_cnns* [1] as a subfolder into *np_4_hrtf_interpolation*:
 ```
 cd np_4_hrtf_interpolation
 ln -s ../google-research/spin_spherical_cnns spin_spherical_cnns
@@ -118,11 +123,11 @@ The approach is suboptimal in terms of computational complexity.
 
 ## License
 
-This project is licensed under the MIT License.
+This source code is licensed under the Apache 2.0 License.
 
 ## 📖 Citation
 
-If you use this code or dataset in your research, please cite:
+If you use this code in your research, please cite:
 
 ```bibtex
 @article{thuillier2024hrtf,
