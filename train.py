@@ -190,16 +190,16 @@ def train_one_epoch(jit_decorator, state, steps_per_epoch, train_iter, reduce_lo
 
 def train(workdir, jit_decorator, rng, steps_per_epoch, model_factory, optimizer_hyperparameters, optimizer_factory,
           train_metrics, train_iterable, reduce_loss, callbacks, train_writer, epochs, profiler_epochs, train_L, clip_grads):
+    """ ... """
 
     ''' initialise state '''
 
-    *uncertainty_calibration_keys, eval_key, rng = random.split(rng, 4)
     state = init_state(rng=rng,
                        model_factory=model_factory,
                        dataset_iterable=train_iterable,
                        optimizer_factory=optimizer_factory,
                        optimizer_hyperparameters=optimizer_hyperparameters)
-    del rng
+    del rng             # for safety to ensure it isn't used downstream since we haven't jax.random.split
 
     ''' recover checkpoint '''
 
@@ -225,8 +225,6 @@ def train(workdir, jit_decorator, rng, steps_per_epoch, model_factory, optimizer
         if state.epoch in profiler_epochs:
 
             with jax.profiler.trace(log_dir=os.path.join(workdir, 'profiler')):
-
-                # with tf.profiler.experimental.Trace('train_one_epoch', step_num=state.step, _r=1):
 
                 state = train_one_epoch(jit_decorator=jit_decorator,
                                         state=state, steps_per_epoch=steps_per_epoch,

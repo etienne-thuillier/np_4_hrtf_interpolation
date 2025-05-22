@@ -6,8 +6,10 @@ This repository contains the official code for our paper:
 > Etienne Thuillier, Craig T. Jin, Vesa Välimäki  
 > *IEEE/ACM Transactions on Audio, Speech, and Language Processing, 2024*
 
-It includes the **Spherical Convolutional Conditional Neural Process** (SConvCNP) model introduced in the paper
-and the **barycentric interpolation** baseline.
+It includes an implementations of
+- the Spherical Convolutional Conditional Neural Process (**SConvCNP**) model proposed in the paper, and
+- the **barycentric interpolation** baseline.
+
 
 ## Install
 
