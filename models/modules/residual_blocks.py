@@ -1,8 +1,9 @@
 import flax.linen as nn
 from typing import Dict, Callable, Optional, Sequence, Any
 from spin_spherical_cnns.spin_spherical_harmonics import SpinSphericalFourierTransformer
-from models.modules.spherical_convolution import (SpinSphericalConvolution3D, SpinSphericalBatchNormMagnitudeNonlin3D,
-                                                  SpinSphericalMagnitudeNonlin3D)
+from models.modules.spherical_convolution import (SpinSphericalPlanarConvolution,
+                                                  SpinSphericalPlanarBatchNormMagnitudeNonlin,
+                                                  SpinSphericalPlanarMagnitudeNonlin)
 
 
 class ResConvBlock(nn.Module):
@@ -213,27 +214,27 @@ class SWSPreActivationResidualBlock3D(nn.Module):
 
         else:
 
-            return SpinSphericalConvolution3D(features=self.features,
-                                              spins_in=self.spins,
-                                              spins_out=self.spins,
-                                              transformer=self.transformer,
-                                              num_filter_params=self.num_filter_params,
-                                              num_filter_taps=self.num_filter_taps,
-                                              spatial_resample_factor=spatial_resample_factor,
-                                              sequence_resample_factor=sequence_resample_factor,
-                                              is_depthwise=False)(x)
+            return SpinSphericalPlanarConvolution(features=self.features,
+                                                  spins_in=self.spins,
+                                                  spins_out=self.spins,
+                                                  transformer=self.transformer,
+                                                  num_filter_params=self.num_filter_params,
+                                                  num_filter_taps=self.num_filter_taps,
+                                                  spatial_resample_factor=spatial_resample_factor,
+                                                  sequence_resample_factor=sequence_resample_factor,
+                                                  is_depthwise=False)(x)
 
     def nonlinearity(self, x):
 
         if self.use_batch_norm:
 
-            return SpinSphericalBatchNormMagnitudeNonlin3D(spins=self.spins,
-                                                           axis_name=self.axis_name,
-                                                           use_running_stats=self.use_running_stats)(x)
+            return SpinSphericalPlanarBatchNormMagnitudeNonlin(spins=self.spins,
+                                                               axis_name=self.axis_name,
+                                                               use_running_stats=self.use_running_stats)(x)
 
         else:
 
-            return SpinSphericalMagnitudeNonlin3D(spins=self.spins)(x)
+            return SpinSphericalPlanarMagnitudeNonlin(spins=self.spins)(x)
 
     def two_layers(self, x):
 

@@ -1,0 +1,18 @@
+This project includes code adapted from the following open-source work:
+
+  Project: google-research/spherical-cnn
+  URL: https://github.com/google-research/spherical-cnn
+  License: Apache License 2.0
+
+Content from layers.py has been adapted to create the following class and methods:
+  - swspconv_spatial_spectral,
+  - SpinSphericalPlanarConvolution,
+  - SphericalPlanarBatchNormalization,
+  - MagnitudeNonlinearity3D,
+  - SpinSphericalPlanarBatchNormMagnitudeNonlin.
+
+Modifications consists in adding planar convolution support for time-varying spherical signals on the sphere, and
+related functionality
+
+Original code copyright:
+  Copyright 2021 The Google Research Authors.

@@ -13,43 +13,38 @@ import models.modules.initializers as initializers
 
 
 class MagnitudeNonlinearity3D(nn.Module):
-  """
+    """
+    Adapted from: google-research/spin_spherical_cnn/layers.py (MagnitudeNonlinearity class)
+    Original Author(s): The Google Research Authors (Apache 2.0 License)
+    Modifications: Adapted for use with spherical-planar signals
 
-  *****
-  ________________
+    Attributes
+        epsilon: Small float constant to avoid division by zero.
+        bias_initializer: initializer for the bias (default to zeroes).
+    """
+    epsilon: jnp.float32 = 1e-6
+    bias_initializer: ssc_layers.Initializer = nn.initializers.zeros
 
-  Magnitude thresholding nonlinearity, suitable for complex inputs.
+    @nn.compact
+    def __call__(self, inputs):
+        """Applies pointwise nonlinearity to 6D inputs."""
+        bias = self.param("bias", self.bias_initializer,
+                          (1, 1, 1, 1, inputs.shape[-2], inputs.shape[-1]))  # **** change made here
 
-  Executes the following operation pointwise: z = relu(|z|+b) * (z / |z|), where
-  b is a learned bias per spin per channel.
-
-  NOTE(machc): This operation does not preserve bandwidth and is pointwise.  It
-  is only approximately equivariant for the equiangular spherical
-  discretization. See `layers_test.MagnitudeNonlinearityTest` for quantitative
-  evaluations of the equivariance error.
-
-  Attributes:
-    epsilon: Small float constant to avoid division by zero.
-    bias_initializer: initializer for the bias (default to zeroes).
-  """
-  epsilon: jnp.float32 = 1e-6
-  bias_initializer: ssc_layers.Initializer = nn.initializers.zeros
-
-  @nn.compact
-  def __call__(self, inputs):
-    """Applies pointwise nonlinearity to 6D inputs."""
-    bias = self.param("bias", self.bias_initializer,
-                      (1, 1, 1, 1, inputs.shape[-2], inputs.shape[-1])) # **** change made here
-
-    modulus_inputs = jnp.abs(inputs)
-    return (nn.relu(modulus_inputs + bias) *
-            (inputs / (modulus_inputs + self.epsilon)))
+        modulus_inputs = jnp.abs(inputs)
+        return (nn.relu(modulus_inputs + bias) *
+                (inputs / (modulus_inputs + self.epsilon)))
 
 
 @partial(jax.jit, static_argnums=(0, 3, 4, 5, 6, 7, 8))
-def swsconv_spatial_spectral_3D(transformer, sphere_set, filter_coefficients, spins_in, spins_out, n_filter_taps,
-                                spatial_resample_factor, sequence_resample_factor, sequence_filter_mode):
+def swspconv_spatial_spectral(transformer, sphere_set, filter_coefficients, spins_in, spins_out, n_filter_taps,
+                              spatial_resample_factor, sequence_resample_factor, sequence_filter_mode):
     """
+    Adapted from: google-research/spin_spherical_cnn/layers.py (_swsconv_spatial_spectral method)
+    Original Author(s): The Google Research Authors (Apache 2.0 License)
+    Modifications: Added planar convolution support for time-varying spherical signals on the sphere
+
+    Attributes
         sphere_set:             array with shape (resolution, resolution, sequence, n_spins, n_channels)
         filter_coefficients:    array with shape (ell_max + 1, spins_in, spins_out, n_channels, features, n_filter_taps)
 
@@ -169,7 +164,8 @@ def swsconv_spatial_spectral_3D(transformer, sphere_set, filter_coefficients, sp
 
     features_out = filter_coefficients.shape[-2]
     shape = (
-    *padded_coefficients_in.shape[:2], len(spins_out), features_out, padded_coefficients_in.shape[-1] // filter_stride)
+        *padded_coefficients_in.shape[:2], len(spins_out), features_out,
+        padded_coefficients_in.shape[-1] // filter_stride)
     coefficients_out = jax.lax.fori_loop(lower=0,
                                          upper=n_filter_taps,
                                          body_fun=body_fun,
@@ -222,32 +218,29 @@ def swsconv_spatial_spectral_3D(transformer, sphere_set, filter_coefficients, sp
     return sphere_set_out.transpose(0, 1, 4, 2, 3)
 
 
-class SpinSphericalConvolution3D(nn.Module):
+class SpinSphericalPlanarConvolution(nn.Module):
     """
-    Adapted from google-research.spin_spherical_cnn/layers.py's SpinSphericalConvolution class.
+    Adapted from: google-research/spin_spherical_cnn/layers.py (SpinSphericalConvolution class)
+    Original Author(s): The Google Research Authors (Apache 2.0 License)
+    Modifications: Added planar convolution support for time-varying spherical signals on the sphere
 
-    A 3D variant to the 2D spin-weighted spherical convolutional layer, whic adds an additional (e.g. time, frequency,
-    ...) dimension to the features that can be filtered. This allows for example convolution time-varying spherical
-    signals. For clarity, we designate additional dimension as "time" below, but this is of course not meant to be
-    limitative as the layer applies for spherical signals of frequency-domain quantities, temperature...
+    See original license at: https://www.apache.org/licenses/LICENSE-2.0
 
-    Depthwise variant (see https://youtu.be/T7o3xvJLuHk?t=312) optional by setting is_depthwise == True
-          + each (input) channel is filtered using a (single) specific / corresponding filter
-          + the number of (output) features equal the numer of (input) channels
+    A spherical-planar variant to the spin-weighted spherical convolutional layer, which adds an additional (e.g. time,
+    frequency, ...) dimension to the features that can be filtered. This allows for example convolution time-varying
+    spherical signals. For clarity, we designate additional dimension as "time" below, but this is of course not meant
+    to be limitative as the layer applies for spherical signals of frequency-domain quantities, temperature...
 
-    ------------------------------------
+    Wraps swsconv_spatial_spectral_3D(), initializing and keeping track of the learnable filter.
 
-    Wraps _swsconv_spatial_spectral(), initializing and keeping track of the
-    learnable filter.
-
-    Attributes:
-      features: int, number of output features (channels).
-      spins_in: (n_spins_in,) Sequence of int containing the input spins.
-      spins_out: (n_spins_out,) Sequence of int containing the output spins.
-      transformer: SpinSphericalFourierTransformer instance.
-      num_filter_params: Number of parameters per filter. Fewer parameters results
-        in more localized filters.
-      initializer: initializer for the filter spectrum.
+    Attributes
+      features:                 int, number of output features (channels).
+      spins_in:                 (n_spins_in,) Sequence of int containing the input spins.
+      spins_out:                (n_spins_out,) Sequence of int containing the output spins.
+      transformer:              SpinSphericalFourierTransformer instance.
+      num_filter_params:        Number of parameters per filter. Fewer parameters results
+                                in more localized filters.
+      initializer:              initializer for the filter spectrum.
     """
     features: int
     spins_in: Sequence[int]
@@ -363,7 +356,7 @@ class SpinSphericalConvolution3D(nn.Module):
 
         ''' vmap across batch dimension'''
 
-        conv = jax.vmap(swsconv_spatial_spectral_3D, in_axes=(None, 0, None, None, None, None, None, None, None),
+        conv = jax.vmap(swspconv_spatial_spectral, in_axes=(None, 0, None, None, None, None, None, None, None),
                         out_axes=0)
 
         if self.is_depthwise:
@@ -398,40 +391,33 @@ class SpinSphericalConvolution3D(nn.Module):
                         self.sequence_filter_mode)
 
 
-class SphericalBatchNormalization3D(nn.Module):
+class SphericalPlanarBatchNormalization(nn.Module):
     """
-	Adapted from google-research.spin_spherical_cnn/layers.py's SphericalBatchNormalization class.
+    Adapted from: google-research/spin_spherical_cnn/layers.py (SphericalBatchNormalization class)
+    Original Author(s): The Google Research Authors (Apache 2.0 License)
+    Modifications: Adapted for use with spherical-planar signals
 
-	A 3D variant to the 2D spin-weighted spherical batch norm layer, whic adds an additional (e.g. time, frequency,
-	...) dimension to the features that can be filtered. This allows for example convolution time-varying spherical
-	signals. For clarity, we designate additional dimension as "time" below, but this is of course not meant to be
-	limitative as the layer applies for spherical signals of frequency-domain quantities, temperature...
+    See original license at: https://www.apache.org/licenses/LICENSE-2.0
 
-	------------------------------------------------------------
+    A 3D variant to the 2D spin-weighted spherical batch norm layer, whic adds an additional (e.g. time, frequency,
+    ...) dimension to the features that can be filtered. This allows for example convolution time-varying spherical
+    signals. For clarity, we designate additional dimension as "time" below, but this is of course not meant to be
+    limitative as the layer applies for spherical signals of frequency-domain quantities, temperature...
 
-	Batch normalization for spherical functions.
-
-	Two main changes with respect to the usual nn.BatchNorm:
-	  1) Subtracting a complex value is not rotation-equivariant for spin-weighted
-		functions, so we add an option to not subtract the mean and only keep
-		track of and divide by the variance.
-	  2) Mean and variance computation on the sphere must take into account the
-		discretization cell areas.
-
-	Attributes:
-	  use_running_stats: if True, the statistics stored in batch_stats
-		will be used instead of computing the batch statistics on the input.
-	  momentum: decay rate for the exponential moving average of
-		the batch statistics.
-	  centered: When False, skips mean-subtraction step.
-	  epsilon: a small float added to variance to avoid dividing by zero.
-	  use_bias: if True, add a complex-valued learned bias.
-	  use_scale: if True, multiply by a complex-valued learned scale.
-	  bias_init: initializer for bias, by default, zero.
-	  scale_init: initializer for scale, by default, one.
-	  axis_name: the axis name used to combine batch statistics from multiple
-		devices. See `jax.pmap` for a description of axis names (default: None).
-	"""
+    Attributes
+        use_running_stats:  if True, the statistics stored in batch_stats
+                            will be used instead of computing the batch statistics on the input.
+        momentum:           decay rate for the exponential moving average of
+                            the batch statistics.
+        centered:           When False, skips mean-subtraction step.
+        epsilon:            a small float added to variance to avoid dividing by zero.
+        use_bias:           if True, add a complex-valued learned bias.
+        use_scale:          if True, multiply by a complex-valued learned scale.
+        bias_init:          initializer for bias, by default, zero.
+        scale_init:         initializer for scale, by default, one.
+        axis_name:          the axis name used to combine batch statistics from multiple
+                            devices. See `jax.pmap` for a description of axis names (default: None).
+    """
     use_running_stats: Optional[bool] = None
     momentum: float = 0.99
     epsilon: float = 1e-5
@@ -445,8 +431,8 @@ class SphericalBatchNormalization3D(nn.Module):
     @nn.compact
     def __call__(self,
                  inputs,
-                 use_running_stats = None,
-                 weights = None):
+                 use_running_stats=None,
+                 weights=None):
         """Normalizes the input using batch (optional) means and variances.
 
 		Stats are computed over the batch and spherical dimensions: (0, 1, 2).
@@ -467,7 +453,7 @@ class SphericalBatchNormalization3D(nn.Module):
 
         # Normalization is independent per spin per channel.
         num_spins, num_channels = inputs.shape[-2:]
-        feature_shape = (1, 1, 1, 1, num_spins, num_channels) # **** change occured here
+        feature_shape = (1, 1, 1, 1, num_spins, num_channels)  # **** change occured here
         reduced_feature_shape = (num_spins, num_channels)
 
         initializing = not self.has_variable("batch_stats", "variance")
@@ -538,8 +524,8 @@ class SphericalBatchNormalization3D(nn.Module):
         return outputs
 
 
-class SpinSphericalMagnitudeNonlin3D(nn.Module):
-    """ version of SpinSphericalBatchNormMagnitudeNonlin3D without batch normalisation """
+class SpinSphericalPlanarMagnitudeNonlin(nn.Module):
+    """ version of SpinSphericalPlanarBatchNormMagnitudeNonlin without batch normalisation """
     spins: Sequence[int]
     bias_initializer: ssc_layers.Initializer = nn.initializers.zeros
 
@@ -565,31 +551,22 @@ class SpinSphericalMagnitudeNonlin3D(nn.Module):
         return jnp.concatenate(outputs, axis=-2)
 
 
-class SpinSphericalBatchNormMagnitudeNonlin3D(nn.Module):
+class SpinSphericalPlanarBatchNormMagnitudeNonlin(nn.Module):
     """
-	Adapted from google-research.spin_spherical_cnn/layers.py's SpinSphericalBatchNormMagnitudeNonlin class.
+    Adapted from: google-research/spin_spherical_cnn/layers.py (SpinSphericalBatchNormalizationNonlinearity class)
+    Original Author(s): The Google Research Authors (Apache 2.0 License)
+    Modifications: Adapted for use with spherical-planar signals
 
-	------------------------------------------------------------------------------
-
-	Combine batch normalization and nonlinarity for spin-spherical functions.
-
-
-	This layer is equivalent to running SpinSphericalBatchNormalization followed
-	by MagnitudeNonlinearityLeakyRelu, but is faster because it splits the
-	computation for spin zero and spin nonzero only once.
-
-	Attributes:
-	  spins: (n_spins,) Sequence of int containing the input spins.
-	  use_running_stats: if True, the statistics stored in batch_stats
-		will be used instead of computing the batch statistics on the input.
-	  momentum: decay rate for the exponential moving average of
-		the batch statistics.
-	  epsilon: a small float added to variance to avoid dividing by zero.
-	  axis_name: the axis name used to combine batch statistics from multiple
-		devices. See `jax.pmap` for a description of axis names (default: None).
-	  bias_initializer: initializer for MagnitudeNonlinearity bias, by default,
-		zero.
-	"""
+    Attributes
+        spins:                  (n_spins,) Sequence of int containing the input spins.
+        use_running_stats:      if True, the statistics stored in batch_stats
+                                will be used instead of computing the batch statistics on the input.
+        momentum:               decay rate for the exponential moving average of the batch statistics.
+        epsilon:                a small float added to variance to avoid dividing by zero.
+        axis_name:              the axis name used to combine batch statistics from multiple devices.
+                                See `jax.pmap` for a description of axis names (default: None).
+        bias_initializer:       initializer for MagnitudeNonlinearity bias, by default, zero.
+    """
     spins: Sequence[int]
     use_running_stats: Optional[bool] = None
     momentum: float = 0.99
@@ -600,8 +577,8 @@ class SpinSphericalBatchNormMagnitudeNonlin3D(nn.Module):
     @nn.compact
     def __call__(self,
                  inputs,
-                 use_running_stats = None,
-                 weights = None):
+                 use_running_stats=None,
+                 weights=None):
         """Calls appropriate batch normalization and nonlinearity per spin."""
         use_running_stats = nn.module.merge_param(
             "use_running_stats", self.use_running_stats, use_running_stats)
