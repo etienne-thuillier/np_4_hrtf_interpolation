@@ -102,7 +102,6 @@ def main(cfg : DictConfig) -> None:
                                               eval_key=test_key,
                                               metrics=metrics,
                                               writer=test_writer,
-                                              jit_decorator=jax.jit,
                                               statistics=statistics,
                                               split='test')
 

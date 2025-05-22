@@ -45,7 +45,7 @@ def make_metrics(metrics, exclude_context_points_from_metrics, metric_reduction,
             if key in metrics}
 
 
-def make_callbacks(cfg, eval_key, metrics, writer, jit_decorator, statistics, split):
+def make_callbacks(cfg, eval_key, metrics, writer, statistics, split):
 
     transform_chain_factory = hydra.utils.instantiate(cfg.data.transforms)
     transform_chain_factory = partial(transform_chain_factory,
@@ -78,8 +78,7 @@ def make_callbacks(cfg, eval_key, metrics, writer, jit_decorator, statistics, sp
                                                                  eval_iter=eval_iter,
                                                                  L=1,
                                                                  metrics=metrics,
-                                                                 checkpoint_manager=checkpoint_manager,
-                                                                 jit_decorator=jit_decorator),
+                                                                 checkpoint_manager=checkpoint_manager),
                                                 period=cfg.callbacks['evaluation'].period)})
 
     if 'metric vs sample count' in cfg.callbacks.keys():
@@ -101,8 +100,7 @@ def make_callbacks(cfg, eval_key, metrics, writer, jit_decorator, statistics, sp
                                             L=1,
                                             metrics=metrics,
                                             count_2_dataset_iterables=count_2_iterable,
-                                            images_writer=writer,
-                                            jit_decorator=jit_decorator),
+                                            images_writer=writer),
                            period=cfg.callbacks['metric vs sample count'].period)
 
         callbacks.update({'metric vs sample count': callback})
@@ -139,8 +137,7 @@ def make_callbacks(cfg, eval_key, metrics, writer, jit_decorator, statistics, sp
                                             image_writer=writer,
                                             per_feature_metrics=per_feature_metrics,
                                             make_plot_job=make_plot_job,
-                                            multiple_samples_per_plot=False,
-                                            jit_decorator=jit_decorator),
+                                            multiple_samples_per_plot=False),
                            period=cfg.callbacks['plot examples'].period)
 
         callbacks.update({'plot examples': callback})
@@ -155,8 +152,7 @@ def make_callbacks(cfg, eval_key, metrics, writer, jit_decorator, statistics, sp
                                             eval_iter=loader_factory(transforms=transforms),
                                             n_bins=2 ** 5,
                                             feature_decimating_factors=cfg.callbacks['evaluate uncertainty miscalibration'].feature_decimating_factors,
-                                            eval_batch=cfg.data.splits.valid.batch_size,
-                                            jit_decorator=jit_decorator),
+                                            eval_batch=cfg.data.splits.valid.batch_size),
                            period=cfg.callbacks['evaluate uncertainty miscalibration'].period)
         callbacks.update({'evaluate uncertainty miscalibration': callback})
 
