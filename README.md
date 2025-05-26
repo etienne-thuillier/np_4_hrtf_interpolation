@@ -10,12 +10,6 @@ It includes an implementations of
 - the Spherical Convolutional Conditional Neural Process (**SConvCNP**) model proposed in the paper, and
 - the **barycentric interpolation** baseline.
 
-It relies on Esteves et al.'s Spin Spherical CNN
-> [Spin-weighted spherical CNNs](https://proceedings.neurips.cc/paper/2020/hash/6217b2f7e4634fa665d31d3b4df81b56-Abstract.html)
-> C. Esteves, A. Makadia, and K. Daniilidis
-> NeuRIPS Processdings, 2020
-
-
 ## Install
 
 ### Source code
@@ -139,3 +133,15 @@ If you use this code in your research, please cite:
   pages={1790--1802},
   doi={10.1109/TASLP.2024.3361377}
 }
+```
+
+## Integrated third-party code
+
+> [Matlab listing: mps.m](https://ccrma.stanford.edu/~jos/fp/Matlab_listing_mps_m.html),
+> in Introduction to Digital Filters with Audio Applications,
+> J.O. Smith, 
+> online book, 2007 edition, accessed May 20th 2025.
+
+> [Spin-weighted spherical CNNs](https://proceedings.neurips.cc/paper/2020/hash/6217b2f7e4634fa665d31d3b4df81b56-Abstract.html),
+> C. Esteves, A. Makadia, and K. Daniilidis,
+> NeuRIPS Processdings, 2020.
