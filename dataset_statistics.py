@@ -1,22 +1,20 @@
-import hydra
-import pickle
 import logging
+import pickle
 from functools import partial
 
+import hydra
 import jax
 import jax.numpy as jnp
-from jax.tree_util import tree_map
 import numpy as np
+from jax.tree_util import tree_map
 
 # from plots import make_qualitative_example_plot_jobs__time_aligned_hrtf
 from utilities.utilities import expand_complex_axis, collapse_complex_axis
-
 
 logger = logging.getLogger(__name__)
 
 
 def make_dataset_statistics(train_set_loader, destination_path=None):
-
     # TODO: we ended up hard-coding these options for simplicity
     data_augmentations = ['permute_ears']
     isotropic_complex_noise = False
@@ -65,17 +63,14 @@ def make_dataset_statistics(train_set_loader, destination_path=None):
                       mu_data=np.array(mu_data),
                       sigma_data=np.array(sigma_data))
 
-
     if destination_path is not None:
         with open(destination_path, 'wb') as f:
-
             pickle.dump(obj=statistics, file=f)
 
     return statistics
 
 
 def constellation_flip_right_ear(y, x):
-
     assert y.shape[-2] == 2, 'expecting two left/right ear channels'
     assert len(x.shape[1:-1]) == 1, 'expecting (1d) list of coordinates'
     assert len(x.shape[:-1]) + len(['sequence', 'spin', 'channel', 'complex']) == len(y.shape), \
@@ -94,7 +89,8 @@ def constellation_flip_right_ear(y, x):
     assert jnp.all(x[0] == x)
 
     i = get_permutation_indices(x[0])
-    assert jnp.all(i[i] == jnp.arange(i.shape[0])), 'expecting permutation indices to carry-out two-by-two swaps, something is fishy here...'
+    assert jnp.all(i[i] == jnp.arange(
+        i.shape[0])), 'expecting permutation indices to carry-out two-by-two swaps, something is fishy here...'
     return jnp.concatenate((y[:, :, ..., :1, :],
                             y[:, i, ..., 1:, :]), axis=-2)
 
@@ -107,7 +103,7 @@ def get_statistics(cfg):
     dataloader_4_statistics = dataloader_factory(split='train',
                                                  cardinality=None,  # whole dataset, no repeats
                                                  seed=cfg.seed,
-                                                 batch_size=None,   # single batch containing whole dataset
+                                                 batch_size=None,  # single batch containing whole dataset
                                                  shuffle=False,
                                                  drop_last=False,
                                                  transforms=transforms_4_statistics)

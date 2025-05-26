@@ -1,26 +1,29 @@
-import os, logging, random, pickle, scipy
-import numpy as np
-import torch
+import logging
+import os
+import pickle
+import random
+import scipy
 from functools import partial
+
+import hydra
+import numpy as np
+import sofar
+import torch
+import torchaudio.functional as F
+from omegaconf import OmegaConf, DictConfig, ListConfig
 from torch.utils.data import Dataset, DataLoader
 from torchvision.transforms import Compose
+
+from utilities.coordinate_system import sph2cart__matlab
 from utilities.mps import mps
 from utilities.utilities import register_resolvers
-from utilities.coordinate_system import sph2cart__matlab
-import sofar
-from omegaconf import OmegaConf, DictConfig, ListConfig
-import hydra
-import torchaudio.functional as F
-
 
 logger = logging.getLogger(__name__)
-
 
 """ torch dataset """
 
 
 def hutubs_files_from_plit(dataset_dir, split, basename_suffix):
-
     assert basename_suffix in ['simulated', 'measured']
 
     basenames = os.listdir(dataset_dir)
@@ -58,7 +61,6 @@ def hutubs_files_from_plit(dataset_dir, split, basename_suffix):
 
 
 def ari_files_from_plit(dataset_dir, split):
-
     basenames = os.listdir(dataset_dir)
     basenames = [basename for basename in basenames if basename.split('_nh')[0] == 'hrtf']
 
@@ -93,7 +95,6 @@ def ari_files_from_plit(dataset_dir, split):
 
 
 def aachen_files_from_plit(dataset_dir, split):
-
     basenames = os.listdir(dataset_dir)
     basenames = [basename for basename in basenames if basename.split('.')[-1] == 'sofa']
 
@@ -132,9 +133,11 @@ class SOFA(Dataset):
         self.sofa_dir = sofa_dir
         self.dataset_entries = list()
         if 'hutubs_simulated' in sofa_sets:
-            self.dataset_entries += hutubs_files_from_plit(dataset_dir=os.path.join(sofa_dir, 'hutubs'), split=split, basename_suffix='simulated')
+            self.dataset_entries += hutubs_files_from_plit(dataset_dir=os.path.join(sofa_dir, 'hutubs'), split=split,
+                                                           basename_suffix='simulated')
         if 'hutubs_measured' in sofa_sets:
-            self.dataset_entries += hutubs_files_from_plit(dataset_dir=os.path.join(sofa_dir, 'hutubs'), split=split, basename_suffix='measured')
+            self.dataset_entries += hutubs_files_from_plit(dataset_dir=os.path.join(sofa_dir, 'hutubs'), split=split,
+                                                           basename_suffix='measured')
         if 'ari' in sofa_sets:
             self.dataset_entries += ari_files_from_plit(dataset_dir=os.path.join(sofa_dir, 'ari'), split=split)
         if 'aachen' in sofa_sets:
@@ -149,13 +152,15 @@ class SOFA(Dataset):
         if cardinality > len(self.dataset_entries):
             repeat = cardinality // len(self.dataset_entries)
             if cardinality % len(self.dataset_entries) > 0:
-                logger.warning(f"Cardinality isn't a multiple of the number of dataset entries for split {split} of sets [{','.join(sofa_sets)}].")
+                logger.warning(
+                    f"Cardinality isn't a multiple of the number of dataset entries for split {split} of sets [{','.join(sofa_sets)}].")
                 repeat += 1
 
         self.dataset_entries = self.dataset_entries * repeat
 
         if len(self.dataset_entries) > cardinality:
-            logger.warning(f"Cardinality is smaller than (eventually repeated) set. Some subjects will appear in smaller proportion than others.")
+            logger.warning(
+                f"Cardinality is smaller than (eventually repeated) set. Some subjects will appear in smaller proportion than others.")
 
         logger.warning(f'Truncating dataset to specified cardinality: {cardinality}.')
         self.dataset_entries = self.dataset_entries[:cardinality]
@@ -185,7 +190,6 @@ class SOFA(Dataset):
 
 
 def collate(batch):
-
     out = list()
     for i in range(len(batch[0])):
         out.append([entry[i] for entry in batch])
@@ -200,7 +204,6 @@ def collate(batch):
 
 
 def worker_init_fn(worker_id):
-
     # following https://github.com/pytorch/pytorch/issues/5059#issuecomment-817275497
     worker_seed = (worker_id + torch.initial_seed()) % np.iinfo(np.int32).max
 
@@ -213,7 +216,6 @@ def make_transform_chain_4_train_and_eval(target_sample_rate, n_taps, group_dela
                                           statistics, spherical_integration_weights, p_permute_ears, observation_count,
                                           min_observation_count, max_observation_count, p_bernouilli_mask,
                                           uniform_s2_grids):
-
     return [to_cartesian_doa,
             to_unit_sphere,
             partial(resample, target_sample_rate=target_sample_rate),
@@ -236,7 +238,6 @@ def make_transform_chain_4_train_and_eval(target_sample_rate, n_taps, group_dela
 
 
 def make_transform_chain_4_statistics(target_sample_rate, n_taps, group_delay_frequency_range):
-
     return [to_cartesian_doa,
             to_unit_sphere,
             partial(resample, target_sample_rate=target_sample_rate),
@@ -252,7 +253,6 @@ def make_transform_chain_4_statistics(target_sample_rate, n_taps, group_delay_fr
 def sofa_dataloader(sofa_dir, sofa_sets, split, cardinality, seed, transforms, batch_size,
                     num_workers, pin_memory, prefetch_factor, shuffle, drop_last, persistent_workers,
                     multiprocessing_context):
-
     assert isinstance(transforms, list)
 
     dataset = SOFA(sofa_dir=sofa_dir,
@@ -292,7 +292,6 @@ def to_unit_sphere(datum):
 
 def resample(datum, target_sample_rate):
     if target_sample_rate != datum['sofa_object'].Data_SamplingRate:
-
         # kaiser_best in https://pytorch.org/audio/stable/tutorials/audio_resampling_tutorial.html
         datum['sofa_object'].Data_IR = F.resample(
             waveform=torch.tensor(datum['sofa_object'].Data_IR, device='cpu'),
@@ -326,7 +325,6 @@ def to_time_aligned_hrtf(datum, sampling_rate, n_taps, group_delay_frequency_ran
 
 
 def to_real_valued(datum):
-
     def format(z):
         assert z.ndim == 3
         z = z.transpose(0, 2, 1)
@@ -344,7 +342,6 @@ def to_real_valued(datum):
 
 
 def add_spin_dimension(datum):
-
     datum['complex_envelope'] = np.expand_dims(datum['complex_envelope'], axis=-3)
     datum['pure_delay'] = np.expand_dims(datum['pure_delay'], axis=-3)
     datum['hrir'] = np.expand_dims(datum['hrir'], axis=-3)
@@ -373,7 +370,6 @@ def make_spherical_integration_weights(datum, spherical_integration_weights):
 
 
 def randomly_permute_ears(datum, p_permute_ears):
-
     if datum['rng'].random() < p_permute_ears:
 
         datum['x'][..., 1] *= -1
@@ -387,7 +383,8 @@ def randomly_permute_ears(datum, p_permute_ears):
 def drop_nyquist(datum):
     if 'mu_data' in datum.keys():
         raise NotImplementedError('need to drop nyquist in the mean and std dev arrays as well...')
-    assert datum['complex_envelope'].shape[-1] % 2 == 1, 'expecting odd number of bins for positive frequency side of spectrum'
+    assert datum['complex_envelope'].shape[
+               -1] % 2 == 1, 'expecting odd number of bins for positive frequency side of spectrum'
     datum['complex_envelope'] = datum['complex_envelope'][..., :-1]
     return datum
 
@@ -398,8 +395,8 @@ def from_pickle_file(data_path):
     return data
 
 
-def draw_mask(datum, observation_count, min_observation_count, max_observation_count, p_bernouilli_mask, uniform_s2_grids):
-
+def draw_mask(datum, observation_count, min_observation_count, max_observation_count, p_bernouilli_mask,
+              uniform_s2_grids):
     max_observation_count_in_uniform_grid = ((uniform_s2_grids[-1] ** 2).sum(-1) > 1e-4).sum()
 
     if observation_count is None:
@@ -421,7 +418,8 @@ def draw_mask(datum, observation_count, min_observation_count, max_observation_c
             min_p = min_observation_count / n_datapoints if min_observation_count is not None else None
             max_p = max_observation_count / n_datapoints if max_observation_count is not None else None
 
-            mask = draw_bernouilli_mask(rng=datum['rng'], x=datum['x'], x_weights=datum['w'], p=p, min_p=min_p, max_p=max_p,
+            mask = draw_bernouilli_mask(rng=datum['rng'], x=datum['x'], x_weights=datum['w'], p=p, min_p=min_p,
+                                        max_p=max_p,
                                         precision=1.0e-5, min_precision=None, max_precision=None)
 
             if np.all(mask.sum(-1) <= max_observation_count):
@@ -632,7 +630,7 @@ def to_time_aligned_hrtf_helper(h, sampling_rate, n_taps, group_delay_frequency_
     pure_delay = pure_delay_wegd(h=h,
                                  fftsize=n_taps,
                                  frequencies=group_delay_frequency_range,
-                                 sampling_rate=sampling_rate, #44100 * fftsize / 256,
+                                 sampling_rate=sampling_rate,  # 44100 * fftsize / 256,
                                  minimum_phase_processor=partial(minimum_phase_jos,
                                                                  fftsize=n_taps * 8,
                                                                  mps_cutoff_dB=-40),
@@ -647,7 +645,6 @@ def to_time_aligned_hrtf_helper(h, sampling_rate, n_taps, group_delay_frequency_
 
 
 def get_source_position_in_cartesian_coordinates_from_sofa(sofa_object):
-
     if sofa_object.SourcePosition_Type == 'cartesian' and sofa_object.SourcePosition_Units == 'meter':
 
         x1, x2, x3 = sofa_object.SourcePosition.transpose()
@@ -725,7 +722,6 @@ def make_rotation_matrix(rotation_axis, theta):
 
 
 def draw_uniform_s2_grid(rng, x, uniform_s2_grids, index=None):
-
     def random_rotation(x_c):
 
         rotation_axis = rng.normal(size=(3,))
@@ -761,20 +757,18 @@ def draw_uniform_s2_grid(rng, x, uniform_s2_grids, index=None):
     mask = np.zeros(shape=(x.shape[0],), dtype=bool)
     for i in range(x_c.shape[0]):
         mask += flip_bit_of_candidate_closest_to_target(x, x_c[i])
-    assert (np.abs(x_c[:,0])>0).sum() == mask.sum()
+    assert (np.abs(x_c[:, 0]) > 0).sum() == mask.sum()
 
     return mask
 
 
 @hydra.main(version_base=None, config_path="conf", config_name="train_sofa_loader")
-def demo(cfg : DictConfig) -> None:
-
+def demo(cfg: DictConfig) -> None:
     print(OmegaConf.to_yaml(cfg))
 
     dataloader = hydra.utils.instantiate(cfg.data.train)
 
     for i, (mask, w, x, complex_envelope, mu_data, sigma_data) in enumerate(dataloader):
-
         print(f"batch {i}")
         # print(f"sofa_file: {len(sofa_file)}")
         print(f"mask: {mask.shape}")
@@ -786,7 +780,6 @@ def demo(cfg : DictConfig) -> None:
 
 
 if __name__ == "__main__":
-
     register_resolvers()
 
     demo()

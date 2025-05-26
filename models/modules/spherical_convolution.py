@@ -1,15 +1,15 @@
 from functools import partial
-import jax
-from jax import lax
-import jax.numpy as jnp
-import flax.linen as nn
 from typing import Sequence, Optional
 
-from spin_spherical_cnns.spin_spherical_harmonics import SpinSphericalFourierTransformer
-from spin_spherical_cnns.sphere_utils import ell_max_from_resolution, spin_spherical_mean
-import spin_spherical_cnns.layers as ssc_layers
+import flax.linen as nn
+import jax
+import jax.numpy as jnp
+from jax import lax
 
 import models.modules.initializers as initializers
+import spin_spherical_cnns.layers as ssc_layers
+from spin_spherical_cnns.sphere_utils import ell_max_from_resolution, spin_spherical_mean
+from spin_spherical_cnns.spin_spherical_harmonics import SpinSphericalFourierTransformer
 
 
 class MagnitudeNonlinearity3D(nn.Module):

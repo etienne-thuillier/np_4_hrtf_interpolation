@@ -1,12 +1,13 @@
 """ barycentric interpolator baseline (without any learnable parameters) wrapper to allow producing performance metrics
 	from the same pipeline used for testing the neural process interpolator models """
 
+from functools import partial
+
+import flax.linen as nn
+import jax.numpy as jnp
 import numpy as np
 import scipy
-import flax.linen as nn
-from functools import partial
 from jax.tree_util import tree_map
-import jax.numpy as jnp
 
 
 def make_delaunay(voronoi):
@@ -17,7 +18,6 @@ def make_delaunay(voronoi):
     faces = np.empty((voronoi.vertices.shape[0], 3), dtype=int)
 
     for i, vertex in enumerate(voronoi.vertices):
-
         region_indices = [j for j in range(len(voronoi.regions)) if i in voronoi.regions[j]]
 
         assert len(region_indices) == 3
@@ -29,7 +29,6 @@ def make_delaunay(voronoi):
 
 
 def order_vertices(vertices, faces):
-
     for i, face in enumerate(faces):
 
         v = vertices[face]
@@ -41,7 +40,6 @@ def order_vertices(vertices, faces):
         cross = np.cross(e1, e2)
 
         if np.dot(center, cross) < 0:
-
             face = np.array([face[1], face[0], face[2]], dtype=int)
 
             faces[i, :] = face
@@ -67,7 +65,6 @@ def global_2_local_coordinates(v0, v1, v2, x):
 
 
 def local_2_global_coordinates(v0, v1, v2, xi):
-
     e0 = v1 - v0
     e1 = v2 - v0
     E = np.stack((e0, e1), axis=-1)
@@ -76,8 +73,7 @@ def local_2_global_coordinates(v0, v1, v2, xi):
 
 
 def s2_2_mesh_location(vertices, faces, x_euclidian_on_S2):
-
-    closest_face = get_closest_face({'vertices':vertices, 'faces': faces}, x_euclidian_on_S2)
+    closest_face = get_closest_face({'vertices': vertices, 'faces': faces}, x_euclidian_on_S2)
 
     v0 = vertices[faces[closest_face]][0, :]
     v1 = vertices[faces[closest_face]][1, :]
@@ -91,7 +87,6 @@ def s2_2_mesh_location(vertices, faces, x_euclidian_on_S2):
 
 
 def make_subsampled_mesh(unit_sphere_locations):
-
     # voronoi = scipy.spatial.SphericalVoronoi(points=points[keep, :])
     voronoi = scipy.spatial.SphericalVoronoi(points=unit_sphere_locations)
     voronoi.calculate_areas()
@@ -105,7 +100,6 @@ def make_subsampled_mesh(unit_sphere_locations):
 
 
 def get_closest_face(mesh, x_euclidian_on_S2):
-
     vertices = mesh['vertices']
     faces = mesh['faces']
 
@@ -116,7 +110,6 @@ def get_closest_face(mesh, x_euclidian_on_S2):
 
 
 def compute_S2_angles(v0, v1, v2):
-
     eps = np.finfo(dtype=v0.dtype).eps
 
     n01 = np.cross(v0, v1)
@@ -180,7 +173,7 @@ def compute_barycentric_coordinates_v2(v0, v1, v2, x):
 
     tot = a0 + a1 + a2
 
-    return a0/tot, a1/tot, a2/tot
+    return a0 / tot, a1 / tot, a2 / tot
 
 
 def compute_barycentric_coordinates(v0, v1, v2, x):
@@ -203,7 +196,7 @@ def compute_barycentric_coordinates(v0, v1, v2, x):
     a2 = a(a2)
     tot = a0 + a1 + a2
 
-    return a0/tot, a1/tot, a2/tot
+    return a0 / tot, a1 / tot, a2 / tot
 
 
 def naive_spherical_barycentric_interpolation(mesh, values, target_locations):
@@ -217,7 +210,6 @@ def naive_spherical_barycentric_interpolation(mesh, values, target_locations):
     n, _ = target_locations.shape
     interpolated_values = np.empty(shape=(n, *v_shape), dtype=values.dtype)
     for i, target_location in enumerate(target_locations):
-
         face, x_euclidian_on_simplex = s2_2_mesh_location(vertices, faces, target_location)
 
         w0, w1, w2 = compute_barycentric_coordinates(v0=vertices[faces[face]][0, :],
@@ -242,7 +234,6 @@ def spherical_barycentric_interpolation(mesh, values, target_locations):
     n, _ = target_locations.shape
     interpolated_values = np.empty(shape=(n, *v_shape), dtype=values.dtype)
     for i, target_location in enumerate(target_locations):
-
         face = get_closest_face(mesh=mesh, x_euclidian_on_S2=target_location)
 
         w0, w1, w2 = compute_barycentric_coordinates_v2(v0=vertices[faces[face]][0, :],
@@ -270,7 +261,6 @@ class BarycentricInterpolator(nn.Module):
         def check_y(y):
 
             if mask is not None:
-
                 y.shape[1] == mask.shape[1]
 
             assert np.prod(y.shape[1:-4]) == np.prod(x_c.shape[1:-1]), 'spatial dimension(s) of context ' \
@@ -287,7 +277,6 @@ class BarycentricInterpolator(nn.Module):
         ''' number of channels for which we need to predict mu_t and sigma_t '''
 
         if mask is None:
-
             assert False, 'never tested this case, put breakpoint here and check if makes sense'
             mask = jnp.ones((1, x_c.shape[1], 1, 1, 1, 1), dtype=x_c.dtype)
 
@@ -296,7 +285,8 @@ class BarycentricInterpolator(nn.Module):
 
             m = np.squeeze(m)
 
-            assert len(m.shape) == 1, 'assuming here that mask sampled only in spatial dimension, in particular not in the sequence/frequency dimension'
+            assert len(
+                m.shape) == 1, 'assuming here that mask sampled only in spatial dimension, in particular not in the sequence/frequency dimension'
 
             indices = np.where(m)[0]
 
@@ -322,7 +312,6 @@ class BarycentricInterpolator(nn.Module):
 
             mu_t = list()
             for i in range(y.shape[0]):
-
                 mu_t += [interpolate(x_c[i], y[i], x_t[i], mask[i])]
 
             mu_t = np.stack(mu_t, axis=0)
@@ -340,7 +329,6 @@ class BarycentricInterpolator(nn.Module):
 
 
 if __name__ == "__main__":
-
     compute_S2_angles(v0=np.array([0, 0, 1], dtype=float),
                       v1=np.array([0, 1, 0], dtype=float),
                       v2=np.array([0, 0, 1], dtype=float))

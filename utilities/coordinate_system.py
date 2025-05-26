@@ -26,7 +26,7 @@ def convert_2_common_coordiate_system(s):
 
     else:
 
-        raise ValueError('('+s.SourcePosition_Type+', '+s.SourcePosition_Units+') not supported')
+        raise ValueError('(' + s.SourcePosition_Type + ', ' + s.SourcePosition_Units + ') not supported')
 
     if s.ListenerPosition_Type == 'cartesian' and s.ListenerPosition_Units == 'metre':
 
@@ -45,7 +45,6 @@ def convert_2_common_coordiate_system(s):
         raise ValueError
 
     listener_up = s.ListenerUp.squeeze()
-
 
     return ear_positions, source_locations, listener_position, listener_view, listener_up
 
@@ -138,7 +137,7 @@ def cart2sph__matlab(x, y, z):
     # azimuth, elevation, radius = sfs.util.cart2sph(x=x, y=y, z=z)
     azimuth, elevation, radius = cart2sph__sfs(x=x, y=y, z=z)
 
-    azimuth = np.fmod(azimuth + 2*np.pi, 2 * np.pi)
+    azimuth = np.fmod(azimuth + 2 * np.pi, 2 * np.pi)
     elevation = - elevation + np.pi / 2
 
     return azimuth, elevation, radius
@@ -171,5 +170,4 @@ def spherical__matlab_2_scipy(azimuth: object, elevation: object, radius: object
 
 
 if __name__ == '__main__':
-
     pass

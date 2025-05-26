@@ -1,20 +1,19 @@
-from functools import partial
-import os.path
-import hydra
 import logging
+import os.path
+from functools import partial
+
+import hydra
+import jax
+from flax.core.frozen_dict import FrozenDict
+from flax.training import checkpoints
+from jax.tree_util import tree_map
 from omegaconf import DictConfig
 from torch.utils.tensorboard import SummaryWriter
 
-import jax
-from jax.tree_util import tree_map
-from flax.training import checkpoints
-from flax.core.frozen_dict import FrozenDict
-
-from dataset_statistics import get_statistics
 import factories.misc
-from utilities.utilities import register_resolvers, TrainState
+from dataset_statistics import get_statistics
 from utilities.rich_utils import print_config_tree
-
+from utilities.utilities import register_resolvers, TrainState
 
 logger = logging.getLogger(__name__)
 
@@ -73,8 +72,7 @@ def predict_sanity_check_output(mu, sigma):
 
 
 @hydra.main(version_base=None, config_path="conf", config_name="train")
-def main(cfg : DictConfig) -> None:
-
+def main(cfg: DictConfig) -> None:
     assert os.path.exists(cfg.paths.workdir), "experiment folder {cfg.paths.workdir} does not exist"
 
     print_config_tree(cfg, resolve=True, save_to_file=True)
@@ -135,7 +133,6 @@ def main(cfg : DictConfig) -> None:
 
 
 if __name__ == "__main__":
-
     # torch.multiprocessing.multiprocessing.set_start_method('spawn')
 
     register_resolvers()

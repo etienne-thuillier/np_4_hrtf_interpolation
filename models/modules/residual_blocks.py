@@ -1,9 +1,11 @@
-import flax.linen as nn
 from typing import Dict, Callable, Optional, Sequence, Any
-from spin_spherical_cnns.spin_spherical_harmonics import SpinSphericalFourierTransformer
+
+import flax.linen as nn
+
 from models.modules.spherical_convolution import (SpinSphericalPlanarConvolution,
                                                   SpinSphericalPlanarBatchNormMagnitudeNonlin,
                                                   SpinSphericalPlanarMagnitudeNonlin)
+from spin_spherical_cnns.spin_spherical_harmonics import SpinSphericalFourierTransformer
 
 
 class ResConvBlock(nn.Module):
@@ -102,7 +104,6 @@ class ResConvBlock(nn.Module):
     def batch_norm(self, y):
 
         if self.batch_norm_factory is not None:
-
             y = self.batch_norm_factory()(y)
 
         return y
@@ -138,7 +139,6 @@ class ResConvBlock(nn.Module):
 
             y = self.convolve(y)
             return x + y
-
 
     @nn.compact
     def __call__(self, x):
@@ -251,7 +251,6 @@ class SWSPreActivationResidualBlock3D(nn.Module):
                           sequence_resample_factor=1)
 
         if self.spatial_resample_factor != 1 or self.sequence_resample_factor != 1:
-
             x = self.convolve(x,
                               spatial_resample_factor=self.spatial_resample_factor,
                               sequence_resample_factor=self.sequence_resample_factor)
@@ -267,7 +266,6 @@ class SWSPreActivationResidualBlock3D(nn.Module):
                           sequence_resample_factor=self.sequence_resample_factor)
 
         if self.spatial_resample_factor != 1 or self.sequence_resample_factor != 1:
-
             x = self.convolve(x,
                               spatial_resample_factor=self.spatial_resample_factor,
                               sequence_resample_factor=self.sequence_resample_factor)

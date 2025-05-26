@@ -19,11 +19,11 @@ class ModelDecorator(nn.Module):
 
         assert False, 'deprecated'
 
-        if sigma.shape[-1] == 2:                                # non-isotropic complex noise model
+        if sigma.shape[-1] == 2:  # non-isotropic complex noise model
             f = jax.vmap(ModelDecorator.sigma_transform,
-                         in_axes=(-1, -1, None),#{'absolute': None, 'relative': None}),
+                         in_axes=(-1, -1, None),  # {'absolute': None, 'relative': None}),
                          out_axes=-1)
-        elif sigma.shape[-1] == 1:                              # isotropic complex noise model
+        elif sigma.shape[-1] == 1:  # isotropic complex noise model
             f = ModelDecorator.sigma_transform
         else:
             raise ValueError
@@ -44,7 +44,7 @@ class ModelDecorator(nn.Module):
                 assert jnp.isrealobj(mu)
                 return (mu ** 2).sum(-1, keepdims=True)
 
-            sigma_floor_relative = jnp.sqrt(power(mu_data) * 10 ** (sigma_floor['relative']/20))
+            sigma_floor_relative = jnp.sqrt(power(mu_data) * 10 ** (sigma_floor['relative'] / 20))
             sigma_floor = (sigma_floor_relative < sigma_floor['absolute']) * sigma_floor['absolute'] + \
                           (sigma_floor_relative >= sigma_floor['absolute']) * sigma_floor_relative
 
@@ -105,9 +105,9 @@ class ModelDecorator(nn.Module):
         assert False, 'deprecated'
 
         y_c = tree_map(lambda z, mean, std: (z - mean) / std,
-                           y_c,
-                           mu_data,
-                           sigma_data)
+                       y_c,
+                       mu_data,
+                       sigma_data)
 
         mu, sigma = self.model_module()(x_c, y_c, x_t, mask, rng, L)
         sigma = self.post_process_sigma(sigma)
@@ -179,6 +179,7 @@ class CNNDecorator(nn.Module):
                 pure_delay = jnp.concatenate([pure_delay] * complex_envelope.shape[sequence_axis], axis=sequence_axis)
 
                 return jnp.concatenate((pure_delay, complex_envelope), axis=channel_axis)
+
             h = stack_along_channel_dimension(pure_delay=h['pure_delay'], complex_envelope=h['complex_envelope'])
             return self.decorated_cnn_module()(h)
 

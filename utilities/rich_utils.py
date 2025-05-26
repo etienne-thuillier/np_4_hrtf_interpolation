@@ -22,19 +22,18 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import logging
 from pathlib import Path
 from typing import Sequence
 
 import rich
 import rich.syntax
 import rich.tree
-from hydra.core.hydra_config import HydraConfig
 # from lightning_utilities.core.rank_zero import rank_zero_only
-from omegaconf import DictConfig, OmegaConf, open_dict
-from rich.prompt import Prompt
-import logging
+from omegaconf import DictConfig, OmegaConf
 
 logger = logging.getLogger(__name__)
+
 
 # from src.utils import pylogger
 
@@ -43,20 +42,20 @@ logger = logging.getLogger(__name__)
 
 # @rank_zero_only
 def print_config_tree(
-    cfg: DictConfig,
-    print_order: Sequence[str] = (
-        "data",
-        "model",
-        "optimizer",
-        "metrics",
-        "callbacks",
-        # "logger",
-        # "trainer",
-        "paths",
-        # "extras",
-    ),
-    resolve: bool = False,
-    save_to_file: bool = False,
+        cfg: DictConfig,
+        print_order: Sequence[str] = (
+                "data",
+                "model",
+                "optimizer",
+                "metrics",
+                "callbacks",
+                # "logger",
+                # "trainer",
+                "paths",
+                # "extras",
+        ),
+        resolve: bool = False,
+        save_to_file: bool = False,
 ) -> None:
     """Prints the contents of a DictConfig as a tree structure using the Rich library.
 

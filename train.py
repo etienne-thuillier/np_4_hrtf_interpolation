@@ -1,35 +1,33 @@
-import os
-import hydra
 import logging
-from clu import parameter_overview
+import os
 from functools import partial
-from typing import Callable
 from itertools import cycle
-from omegaconf import DictConfig
-from torch.utils.tensorboard import SummaryWriter
-from ml_collections import FrozenConfigDict
+from typing import Callable
 
+import hydra
 import jax
-import jax.numpy as jnp
 import jax.example_libraries.optimizers as jax_opt
+import jax.numpy as jnp
+import optax
+from clu import parameter_overview
+from flax.training import checkpoints
 from jax import random
 from jax.tree_util import tree_map
-import optax
-from flax.training import checkpoints
+from ml_collections import FrozenConfigDict
+from omegaconf import DictConfig
+from torch.utils.tensorboard import SummaryWriter
 
-# from plots import make_qualitative_example_plot_jobs__time_aligned_hrtf
-from utilities.utilities import register_resolvers, expand_complex_axis, flatten_dictionary, TrainState
-from utilities.rich_utils import print_config_tree
-from factories.sconvcnp import INPUT_FEATURES
 import factories.misc
 from dataset_statistics import get_statistics
-
+from factories.sconvcnp import INPUT_FEATURES
+from utilities.rich_utils import print_config_tree
+# from plots import make_qualitative_example_plot_jobs__time_aligned_hrtf
+from utilities.utilities import register_resolvers, expand_complex_axis, flatten_dictionary, TrainState
 
 logger = logging.getLogger(__name__)
 
 
 def init_state(rng, model_factory, dataset_iterable, optimizer_factory, optimizer_hyperparameters):
-
     init_key, rng = jax.random.split(rng, 2)
 
     mask, _, x_c, y_c, mu_data, sigma_data = tree_map(lambda z: jnp.array(z), next(dataset_iterable))
@@ -39,7 +37,8 @@ def init_state(rng, model_factory, dataset_iterable, optimizer_factory, optimize
                                                       sigma_data=sigma_data)
     del x_c, y_c, mask, mu_data, sigma_data
 
-    batch_stats = {'dummy': jnp.zeros((1,), jnp.float32)}  # dummy placeholder batch_stats array for making script "batch norm agnostic"
+    batch_stats = {'dummy': jnp.zeros((1,),
+                                      jnp.float32)}  # dummy placeholder batch_stats array for making script "batch norm agnostic"
     if 'batch_stats' in init.keys():  # case when batch norm is used in model
 
         batch_stats = init['batch_stats']
@@ -69,7 +68,7 @@ def train_step(state, mask, w, x_c, y_c, mu_data, sigma_data, rng, L, metrics, r
         m = jax.lax.broadcast_in_dim(mask,
                                      shape=z.shape,
                                      broadcast_dimensions=list(range(len(mask.shape))))
-        return m * z + ~m # + ~m * jnp.finfo(z.dtype).max
+        return m * z + ~m  # + ~m * jnp.finfo(z.dtype).max
 
     train_step_sanity_check_input(state=state, x_c=x_c, x_c_weights=w, y_c=y_c, rng=rng, L=L)
 
@@ -104,7 +103,6 @@ def train_step(state, mask, w, x_c, y_c, mu_data, sigma_data, rng, L, metrics, r
     (nll, (m, batch_stats)), grad = jax.value_and_grad(loss, argnums=0, has_aux=True)(state.params,
                                                                                       batch_stats=state.batch_stats)
     if clip_grads:
-
         grad = jax_opt.clip_grads(grad, 1)
 
     state = state.replace(batch_stats=batch_stats)
@@ -151,7 +149,6 @@ def train_step_sanity_check_output(mu, sigma):
 
 def train_one_epoch(state, steps_per_epoch, train_iter, reduce_loss, train_L, train_metrics,
                     train_writer, is_profiled, clip_grads):
-
     for _ in range(steps_per_epoch):
 
         mask, w, x_c, y_c, mu_data, sigma_data = tree_map(lambda z: jnp.array(z), next(train_iter))
@@ -179,7 +176,6 @@ def train_one_epoch(state, steps_per_epoch, train_iter, reduce_loss, train_L, tr
         # with train_writer.as_default():
 
         for key, value in flatten_dictionary(metrics).items():
-
             # tf.summary.scalar(key, value, step=state.step)
             train_writer.add_scalar(tag=key, scalar_value=value.item(), global_step=state.step)
 
@@ -189,7 +185,8 @@ def train_one_epoch(state, steps_per_epoch, train_iter, reduce_loss, train_L, tr
 
 
 def train(workdir, rng, steps_per_epoch, model_factory, optimizer_hyperparameters, optimizer_factory,
-          train_metrics, train_iterable, reduce_loss, callbacks, train_writer, epochs, profiler_epochs, train_L, clip_grads):
+          train_metrics, train_iterable, reduce_loss, callbacks, train_writer, epochs, profiler_epochs, train_L,
+          clip_grads):
     """ ... """
 
     ''' initialise state '''
@@ -199,7 +196,7 @@ def train(workdir, rng, steps_per_epoch, model_factory, optimizer_hyperparameter
                        dataset_iterable=train_iterable,
                        optimizer_factory=optimizer_factory,
                        optimizer_hyperparameters=optimizer_hyperparameters)
-    del rng             # for safety to ensure it isn't used downstream since we haven't jax.random.split
+    del rng  # for safety to ensure it isn't used downstream since we haven't jax.random.split
 
     ''' recover checkpoint '''
 
@@ -242,13 +239,11 @@ def train(workdir, rng, steps_per_epoch, model_factory, optimizer_hyperparameter
         ''' callbacks '''
 
         for key, value in callbacks.items():
-
             value(tag=key, state=state)
 
 
 @hydra.main(version_base=None, config_path="conf", config_name="train")
-def main(cfg : DictConfig) -> None:
-
+def main(cfg: DictConfig) -> None:
     # hydra_cfg = hydra.core.hydra_config.HydraConfig.get()
 
     print_config_tree(cfg, resolve=True, save_to_file=True)
@@ -266,7 +261,6 @@ def main(cfg : DictConfig) -> None:
     statistics = get_statistics(cfg)
 
     def make_train_set_loader():
-
         transform_chain_factory = hydra.utils.instantiate(cfg.data.transforms)
         transforms = transform_chain_factory(statistics=statistics,
                                              observation_count=None,
@@ -293,11 +287,11 @@ def main(cfg : DictConfig) -> None:
 
     rng, valid_key, _ = jax.random.split(rng, 3)
     callbacks = factories.misc.make_callbacks(cfg=cfg,
-                               eval_key=valid_key,
-                               metrics=metrics,
-                               writer=valid_writer,
-                               statistics=statistics,
-                               split='valid')
+                                              eval_key=valid_key,
+                                              metrics=metrics,
+                                              writer=valid_writer,
+                                              statistics=statistics,
+                                              split='valid')
 
     train_iterable, steps_per_epoch = make_train_set_loader()
 
@@ -318,7 +312,6 @@ def main(cfg : DictConfig) -> None:
 
 
 if __name__ == "__main__":
-
     # torch.multiprocessing.multiprocessing.set_start_method('spawn')
 
     register_resolvers()

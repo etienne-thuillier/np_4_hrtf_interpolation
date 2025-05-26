@@ -1,4 +1,5 @@
 from typing import Callable, Sequence
+
 import flax.linen as nn
 import jax
 import jax.numpy as jnp
@@ -20,7 +21,6 @@ def reshape_with_expanded_complex_axis(features, complex):
                             2: complex-valued data.
     :return:            Reshaped array with additional trailing axis representing the complex plane.
     """
-
 
     channels_ = features.shape[-1]
 
@@ -47,9 +47,9 @@ def get_mu_channel_count(total_channel_count, n_complex, isotropic_complex_noise
     """
 
     if isotropic_complex_noise:
-        mu_channel_count = total_channel_count / (n_complex + 1)            # mu + real-valued sigma
+        mu_channel_count = total_channel_count / (n_complex + 1)  # mu + real-valued sigma
     else:
-        mu_channel_count = total_channel_count / (n_complex + n_complex)    # mu + real-valued sigma
+        mu_channel_count = total_channel_count / (n_complex + n_complex)  # mu + real-valued sigma
 
     assert mu_channel_count == int(mu_channel_count)
 
@@ -57,7 +57,6 @@ def get_mu_channel_count(total_channel_count, n_complex, isotropic_complex_noise
 
 
 def f_2_mu(f, y_c, isotropic_complex_noise):
-
     n_complex = y_c.shape[-1]
 
     mu_channel_count = get_mu_channel_count(total_channel_count=f.shape[-1], n_complex=n_complex,
@@ -71,7 +70,6 @@ def f_2_mu(f, y_c, isotropic_complex_noise):
 
 
 def f_2_sigma(f, y_c, isotropic_complex_noise):
-
     n_complex = y_c.shape[-1]
 
     mu_channel_count = get_mu_channel_count(total_channel_count=f.shape[-1], n_complex=n_complex,
@@ -136,7 +134,6 @@ class ConvCNP(nn.Module):
                                            'spins, channels, real/imaginary part), where channel is typically the ear index'
 
             if len(y.shape) == 7:
-
                 assert y.shape[1] == y.shape[2], 'expected array of shape (batch, resolution, ' \
                                                  'resolution, sequence, spins, channels, real/imaginary part)'
 
@@ -184,7 +181,6 @@ class ConvCNP(nn.Module):
                                          y_c=y,
                                          x_t=broadcast_batch(self.grid, y.shape[0]))
 
-
         if isinstance(y_c, dict):
             module_prefix = {key: key + '/' for key in y_c.keys()}
         else:
@@ -228,7 +224,8 @@ class ConvCNP(nn.Module):
             for i in range(sigma.shape[-1]):
                 sigma_gain += [calibration_set_convolution(mask=broadcast_batch(fullmask, sigma.shape[0]),
                                                            x_c=broadcast_batch(self.grid, sigma.shape[0]),
-                                                           y_c=broadcast_batch(sigma_gain_grid[..., i:i+1], sigma.shape[0]),
+                                                           y_c=broadcast_batch(sigma_gain_grid[..., i:i + 1],
+                                                                               sigma.shape[0]),
                                                            x_t=x_t)]
             sigma_gain = jnp.stack(sigma_gain, axis=-1)
             sigma *= sigma_gain

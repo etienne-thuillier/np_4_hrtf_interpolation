@@ -1,13 +1,13 @@
+import operator
 from functools import partial, reduce
 from typing import Sequence
-import operator
-import numpy as np
-import jax.numpy as jnp
+
 import flax.linen as nn
+import jax.numpy as jnp
+import numpy as np
 
-import spin_spherical_cnns.spin_spherical_harmonics as ssh
 import spin_spherical_cnns.sphere_utils as sphere_utils
-
+import spin_spherical_cnns.spin_spherical_harmonics as ssh
 from utilities.coordinate_system import sph2cart__sfs
 
 
@@ -72,16 +72,16 @@ class Real(nn.Module):
 
 
 class ReLU(nn.Module):
-	""" wrapper of relu function into a module, as required when rematerialization is carried out in InSequence
-	    modules
-	"""
-	@nn.compact
-	def __call__(self, x):
-		return nn.relu(x)
+    """ wrapper of relu function into a module, as required when rematerialization is carried out in InSequence
+        modules
+    """
+
+    @nn.compact
+    def __call__(self, x):
+        return nn.relu(x)
 
 
 def make_2d_equiangular_grid_in_3d_euclidian_space(resolution):
-
     longitude, colatitude = sphere_utils.make_equiangular_grid(resolution=resolution)
     grid = jnp.stack(sph2cart__sfs(alpha=longitude, beta=colatitude, r=1.0), axis=-1)
 

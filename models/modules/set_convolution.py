@@ -1,14 +1,14 @@
-from typing import Any, Callable, Optional
 from functools import partial
-import jax
-from jax.tree_util import tree_map
-from jax import lax
-import jax.numpy as jnp
-import flax.linen as nn
+from typing import Any, Callable, Optional
 
-from spin_spherical_cnns.layers import Initializer
+import flax.linen as nn
+import jax
+import jax.numpy as jnp
+from jax import lax
+from jax.tree_util import tree_map
 
 from models.modules.initializers import softplus_minus_1_scale_initialiser__von_mises
+from spin_spherical_cnns.layers import Initializer
 
 
 class SquaredExponentialKernel:
@@ -432,9 +432,9 @@ class TruncateContextSetDecorator(nn.Module):
 
 class SwapIpsiContraDecorator1(nn.Module):
     batched_set_convolution_module: Callable
+
     @nn.compact
     def __call__(self, mask, x_c, y_c, x_t):
-
         assert x_c.shape[:-1] == mask.shape, 'expecting x_c with shape (batch, *mask.shape, 3)'
         assert len(mask.shape) + len(['sequence', 'spin', 'channel', 'complex']) == len(y_c.shape), \
             'expecting y_c with shape (batch, *mask.shape, sequence, spin, channel, complex)'
@@ -463,9 +463,9 @@ class SwapIpsiContraDecorator1(nn.Module):
 
 class SwapIpsiContraDecorator2(nn.Module):
     batched_set_convolution_module: Callable
+
     @nn.compact
     def __call__(self, mask, x_c, y_c, x_t):
-
         assert x_c.shape[:-1] == mask.shape, 'expecting x_c with shape (batch, *mask.shape, 3)'
         assert len(mask.shape) + len(['sequence', 'spin', 'channel', 'complex']) == len(y_c.shape), \
             'expecting y_c with shape (batch, *mask.shape, sequence, spin, channel, complex)'
