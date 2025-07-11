@@ -9,20 +9,21 @@ experiment=$(date +"%Y%m%d%H%M%S")
 ## resume experiment
 #experiment=20250421162952
 
+## evaluate
+#experiment=20250421162952
+#checkpoint=checkpoint_epoch1040_step43680
+
 mkdir -p "${sessions}/${experiment}"
 
 # train (full)
-python_command="HYDRA_FULL_ERROR=1 python3 ${workdir}/models4DynCues/code/train.py paths=triton data=default callbacks=default model=default trainer=default paths.sessions=${sessions} paths.experiment=${experiment}"
+python_command="HYDRA_FULL_ERROR=1 python3 ${workdir}/np_4_hrtf_interpolation/train.py paths=triton data=default callbacks=default model=default trainer=default paths.sessions=${sessions} paths.experiment=${experiment}"
 
 ## train (tiny)
-#python_command="HYDRA_FULL_ERROR=1 python3 ${workdir}/models4DynCues/code/train.py paths=triton data=tiny callbacks=tiny model=tiny trainer=tiny paths.sessions=${sessions} paths.experiment=${experiment} model.epochs=50"
+#python_command="HYDRA_FULL_ERROR=1 python3 ${workdir}/np_4_hrtf_interpolation/train.py paths=triton data=tiny callbacks=tiny model=tiny trainer=tiny paths.sessions=${sessions} paths.experiment=${experiment} model.epochs=50"
 
 ## eval (full)
-#python_command="HYDRA_FULL_ERROR=1 python3 ${workdir}/models4DynCues/code/evaluate_hydra.py --config-path=${sessions}/${experiment}/.hydra --config-name=config.yaml paths.workdir=${sessions}/${experiment} paths.experiment=${experiment} +checkpoint=checkpoint_epoch1040_step43680"
+#python_command="HYDRA_FULL_ERROR=1 python3 ${workdir}/np_4_hrtf_interpolation/test.py --config-path=${sessions}/${experiment}/.hydra --config-name=config.yaml paths.workdir=${sessions}/${experiment} paths.experiment=${experiment} +checkpoint=${checkpoint}"
 
-## debug scripts
-#python_command="python3 ${workdir}/models4DynCues/code/tmp.py paths=triton data=sofa_dataloader_tiny paths.sessions=${sessions} paths.experiment=${experiment}"
-#python_command="HYDRA_FULL_ERROR=1 python3 ${workdir}/models4DynCues/code/tmp.py paths=triton data=sofa_dataloader callbacks=none paths.sessions=${sessions} paths.experiment=${experiment}"
 
 echo ${python_command}
 

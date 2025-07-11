@@ -10,7 +10,7 @@ experiment=20250421162952
 mkdir -p "${sessions}/${experiment}"
 
 # train (full)
-python_command="HYDRA_FULL_ERROR=1 python3 ${workdir}/models4DynCues/code/train.py paths=triton data=default callbacks=default model=default trainer=default paths.sessions=${sessions} paths.experiment=${experiment}"
+python_command="HYDRA_FULL_ERROR=1 python3 ${workdir}/np_4_hrtf_interpolation/train.py paths=triton data=default callbacks=default model=default trainer=default paths.sessions=${sessions} paths.experiment=${experiment}"
 ## train (tiny)
 #python_command="HYDRA_FULL_ERROR=1 python3 ${workdir}/models4DynCues/code/train.py paths=triton data=tiny callbacks=tiny model=tiny trainer=tiny paths.sessions=${sessions} paths.experiment=${experiment} model.epochs=50"
 
