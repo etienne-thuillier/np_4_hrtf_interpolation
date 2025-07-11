@@ -14,55 +14,6 @@ class ModelDecorator(nn.Module):
     noise_mode: str
     hermitian_padding: typing.Optional[int] = 0
 
-    @staticmethod
-    def sigma_transform_vmap(sigma, mu_data, sigma_floor):
-
-        assert False, 'deprecated'
-
-        if sigma.shape[-1] == 2:  # non-isotropic complex noise model
-            f = jax.vmap(ModelDecorator.sigma_transform,
-                         in_axes=(-1, -1, None),  # {'absolute': None, 'relative': None}),
-                         out_axes=-1)
-        elif sigma.shape[-1] == 1:  # isotropic complex noise model
-            f = ModelDecorator.sigma_transform
-        else:
-            raise ValueError
-        return f(sigma, mu_data, sigma_floor)
-
-    @staticmethod
-    def sigma_transform(sigma, mu_data, sigma_floor):
-
-        assert 'absolute' in sigma_floor.keys()
-        assert 'relative' in sigma_floor.keys()
-
-        if sigma_floor['absolute'] is not None and sigma_floor['relative'] is not None:
-
-            assert sigma_floor['absolute'] > 0, 'positive (linear) value expected, something is fishy here'
-            assert sigma_floor['relative'] < 0, 'negative dB value expected, something is fishy here'
-
-            def power(mu):
-                assert jnp.isrealobj(mu)
-                return (mu ** 2).sum(-1, keepdims=True)
-
-            sigma_floor_relative = jnp.sqrt(power(mu_data) * 10 ** (sigma_floor['relative'] / 20))
-            sigma_floor = (sigma_floor_relative < sigma_floor['absolute']) * sigma_floor['absolute'] + \
-                          (sigma_floor_relative >= sigma_floor['absolute']) * sigma_floor_relative
-
-            return sigma_floor + nn.softplus(sigma - sigma_floor)
-
-        elif sigma_floor['absolute'] is not None:
-
-            assert sigma_floor['absolute'] > 0, 'positive (linear) value expected, something is fishy here'
-            return sigma_floor['absolute'] + (1 - sigma_floor['absolute']) * nn.softplus(sigma)
-
-        elif sigma_floor['absolute'] is None and sigma_floor['relative'] is None:
-
-            return sigma
-
-        else:
-
-            raise ValueError
-
     def post_process_sigma(self, sigma):
 
         if self.noise_mode == 'homoskedastic':
@@ -80,10 +31,13 @@ class ModelDecorator(nn.Module):
             fixed_sigma_value = float(self.noise_mode.split('sigma=')[-1])
             sigma = tree_map(lambda s: fixed_sigma_value * jnp.ones_like(s), sigma)
 
+        elif self.noise_mode == 'heteroskedastic':
+
+            pass        # do nothing in this case: use models' predictions of sigma
+
         else:
 
-            assert self.noise_mode == 'heteroskedastic'
-        # do nothing in this case: use models' predictions of sigma
+            raise ValueError
 
         return sigma
 
@@ -95,33 +49,6 @@ class ModelDecorator(nn.Module):
         sigma = self.post_process_sigma(sigma)
 
         mu = tree_map(lambda y, mean: y + mean, mu, mu_data)
-
-        # sigma = tree_map(ModelDecorator.sigma_transform_vmap, sigma, mu_data, self.sigma_floor)
-
-        return mu, sigma
-
-    def normalised(self, x_c, y_c, x_t, mask, rng, L, mu_data, sigma_data):
-
-        assert False, 'deprecated'
-
-        y_c = tree_map(lambda z, mean, std: (z - mean) / std,
-                       y_c,
-                       mu_data,
-                       sigma_data)
-
-        mu, sigma = self.model_module()(x_c, y_c, x_t, mask, rng, L)
-        sigma = self.post_process_sigma(sigma)
-
-        mu = tree_map(lambda y, mean, std: y * std + mean, mu, mu_data, sigma_data)
-
-        # TODO: somewhat hackish way of putting a floor to predicted sigma, although this has also been done in
-        #       model... this prevents un-whitening from producing 0-valued sigma, which tend to occur in non-isotropic
-        #       case. the alternative is to drop the model decorator and to integrate the whitening within the model
-        #       itself, e.g. within the post-processing step
-        # **** where is the floor??
-        sigma = tree_map(lambda z, std: z * std, sigma, sigma_data)
-
-        sigma = tree_map(ModelDecorator.sigma_transform_vmap, sigma, mu_data, self.sigma_floor.unfreeze())
 
         return mu, sigma
 
@@ -139,19 +66,14 @@ class ModelDecorator(nn.Module):
 
             mu, sigma = self.center(x_c, y_c, x_t, mask, rng, L, mu_data, sigma_data)
 
-        elif self.input_preprocessing_mode == 'normalised':
+        elif self.input_preprocessing_mode == 'identity':
 
-            assert False, 'deprecated'
-            mu, sigma = self.normalised(x_c, y_c, x_t, mask, rng, L, mu_data, sigma_data)
+            mu, sigma = self.model_module()(x_c, y_c, x_t, mask, rng, L)
+            sigma = self.post_process_sigma(sigma)
 
         else:
 
-            assert self.input_preprocessing_mode == 'identity'
-            mu, sigma = self.model_module()(x_c, y_c, x_t, mask, rng, L)
-            sigma = self.post_process_sigma(sigma)
-            assert False, 'deprecated'
-            # sigma = tree_map(ModelDecorator.sigma_transform_vmap, sigma, mu_data,
-            #                      self.sigma_floor.to_dict(), self.sigma_floor_mode.to_dict())
+            raise ValueError
 
         if self.hermitian_padding != 0:
             assert not isinstance(mu, dict), 'case not yest supported'
