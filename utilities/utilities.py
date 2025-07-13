@@ -5,6 +5,7 @@ from typing import Any as KeyArray
 
 import jax.numpy as jnp
 import numpy as np
+from scipy.spatial import cKDTree
 from flax import core, struct
 from flax.training import train_state
 from jax.tree_util import tree_map
@@ -47,6 +48,65 @@ def flatten_dictionary(d, key_prefix=None):
             l.update({key: item})
 
     return l
+
+
+def permutation_from_A_to_B(A: np.ndarray, B: np.ndarray, tol: float = 0.0):
+    """
+    Return `p` such that  B[p[i]]  ==  A[i]   (within `tol`, if given).
+
+    Parameters
+    ----------
+    A, B : (N, 3) float arrays
+        Same set of points, scrambled.
+    tol : float, optional
+        Acceptable Euclidean distance between matching points.
+        Leave at 0 for exact, bit-wise comparison (fastest).
+
+    Returns
+    -------
+    p : (N,) int array
+        Index mapping from A to B.
+    """
+    if tol == 0.0:
+        # ------- exact match, fast ---------- #
+        # 1.  Sort both arrays lexicographically; keep original indices.
+        sa = np.lexsort(A.T[::-1])      # sort by x, then y, then z
+        sb = np.lexsort(B.T[::-1])
+
+        # (optional sanity check)
+        if not np.array_equal(A[sa], B[sb]):
+            raise ValueError("A and B don't contain identical points.")
+
+        # 2.  Build permutation:  p[i] = index in B that matches A[i]
+        p = np.empty_like(sa)
+        p[sa] = sb
+        return p
+
+    # ------- inexact match (e.g. small FP noise) ---------- #
+    # Use a nearest-neighbour search.
+    tree = cKDTree(B)
+    d, p = tree.query(A, distance_upper_bound=tol)
+
+    if (d > tol).any():
+        raise ValueError(
+            f"Some points were farther than tol={tol:g} (max distance {d.max():g})."
+        )
+    return p
+
+
+def lebedev_degree_2_order(quadrature_grid_degree):
+    table = {degree: order
+             for degree, order
+             in zip([6, 14, 26, 38, 50, 74, 86, 110, 146, 170, 194, 230, 266, 302, 350,
+                     434, 590, 770, 974, 1202, 1454, 1730, 2030, 2354, 2702, 3074, 3470,
+                     3890, 4334, 4802, 5294, 5810],
+                    [3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31, 35, 41, 47,
+                     53, 59, 65, 71, 77, 83, 89, 95, 101, 107, 113, 119, 125, 131])}
+
+    if quadrature_grid_degree not in table.keys():
+        raise ValueError(f"Degree {quadrature_grid_degree} not in Lebedev table.")
+
+    return table[quadrature_grid_degree]
 
 
 @partial(partial, tree_map)

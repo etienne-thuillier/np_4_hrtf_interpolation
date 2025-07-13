@@ -7,6 +7,7 @@ from functools import partial
 
 import hydra
 import numpy as np
+from scipy.integrate import lebedev_rule
 import sofar
 import torch
 import torchaudio.functional as F
@@ -16,7 +17,7 @@ from torchvision.transforms import Compose
 
 from utilities.coordinate_system import sph2cart__matlab
 from utilities.mps import mps
-from utilities.utilities import register_resolvers
+from utilities.utilities import register_resolvers, permutation_from_A_to_B, lebedev_degree_2_order
 
 logger = logging.getLogger(__name__)
 
@@ -215,7 +216,29 @@ def worker_init_fn(worker_id):
 def make_transform_chain_4_train_and_eval(target_sample_rate, n_taps, group_delay_frequency_range,
                                           statistics, spherical_integration_weights, p_permute_ears, observation_count,
                                           min_observation_count, max_observation_count, p_bernouilli_mask,
-                                          uniform_s2_grids):
+                                          uniform_s2_grids, ordered_key_list=None):
+
+    if ordered_key_list is None:
+        ordered_key_list = ['mask', 'w', 'x', 'complex_envelope', 'mu_data', 'sigma_data']
+
+    if ordered_key_list != ['mask', 'w', 'x', 'complex_envelope', 'mu_data', 'sigma_data']:
+
+        logger.warning('Non-default ordered_key_list provided. '
+                       'This isn\'t compatible with train and evaluation scripts. '
+                       'This is fine if you intend to use the dataloader for another purpose, e.g. plotting data '
+                       'features in publications.')
+
+    if 'mu_data' in ordered_key_list or 'sigma_data' in ordered_key_list:
+
+        if statistics is None:
+            raise ValueError('train set statistics must be provided to output mu_data and/or sigma_data')
+
+        insert_dataset_statistics_ = [partial(insert_dataset_statistics, statistics=statistics)]
+
+    else:
+
+        insert_dataset_statistics_ = []
+
     return [to_cartesian_doa,
             to_unit_sphere,
             partial(resample, target_sample_rate=target_sample_rate),
@@ -225,7 +248,7 @@ def make_transform_chain_4_train_and_eval(target_sample_rate, n_taps, group_dela
             drop_nyquist,
             to_real_valued,
             add_spin_dimension,
-            partial(insert_dataset_statistics, statistics=statistics),
+            *insert_dataset_statistics_,
             partial(make_spherical_integration_weights,
                     spherical_integration_weights=spherical_integration_weights),
             # partial(truncate_sequence_dim, i_start=, i_end=)
@@ -234,7 +257,7 @@ def make_transform_chain_4_train_and_eval(target_sample_rate, n_taps, group_dela
                     min_observation_count=min_observation_count, max_observation_count=max_observation_count,
                     p_bernouilli_mask=p_bernouilli_mask, uniform_s2_grids=uniform_s2_grids),
             sort_mask,
-            partial(dict_to_list, ordered_key_list=['mask', 'w', 'x', 'complex_envelope', 'mu_data', 'sigma_data'])]
+            partial(dict_to_list, ordered_key_list=ordered_key_list)]
 
 
 def make_transform_chain_4_statistics(target_sample_rate, n_taps, group_delay_frequency_range):
@@ -361,6 +384,17 @@ def make_spherical_integration_weights(datum, spherical_integration_weights):
     elif spherical_integration_weights == 'spherical_voronoi_area':
         voronoi = scipy.spatial.SphericalVoronoi(points=datum['x'])
         w = voronoi.calculate_areas()
+    elif spherical_integration_weights == 'lebedev':
+
+        degree = datum['x'].shape[0]
+        order = lebedev_degree_2_order(degree)
+        [x_, w] = lebedev_rule(order)
+        x_ = x_.transpose()
+
+        p = permutation_from_A_to_B(datum['x'], x_, tol=1e-4)
+        assert np.allclose(datum['x'], x_[p])   #, rtol=1.e-4, atol=1.e-6)
+        w = w[p]
+
     else:
         raise ValueError
 
