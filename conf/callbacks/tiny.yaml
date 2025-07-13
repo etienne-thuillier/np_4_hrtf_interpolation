@@ -9,7 +9,7 @@ evaluation:
 
 metric vs sample count:
   period: 1
-  sample_count_step: 50
+  sample_count_step: 30
 
 #plot examples from validation set:
 #  period: 1

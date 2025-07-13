@@ -91,7 +91,7 @@ def make_callbacks(cfg, eval_key, metrics, writer, statistics, split):
                              p_bernouilli_mask=0.0)
 
         count_2_iterable = {f'{count}': loader_factory(transforms=transforms(observation_count=count))
-                            for count in range(0,
+                            for count in range(cfg.callbacks['metric vs sample count'].sample_count_step,
                                                cfg.data.max_observation_count + 1,
                                                cfg.callbacks['metric vs sample count'].sample_count_step)}
 
