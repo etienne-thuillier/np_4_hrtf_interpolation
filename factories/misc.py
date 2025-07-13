@@ -45,12 +45,12 @@ def make_metrics(metrics, exclude_context_points_from_metrics, metric_reduction,
                                                      sample_reduction_mode='mean'),
              'per-feature log-mag distance (dB)': dict(per_feature_metric=per_feature_log_mag_distance_db,
                                                        sample_reduction_mode='mean'),
-             'per-filter log-spectral distortion (dB)': dict(per_feature_metric=per_location_log_spectral_distortion_db,
-                                                             sample_reduction_mode='mean')}.items()
+             'per-location log-spectral distortion (dB)': dict(per_feature_metric=per_location_log_spectral_distortion_db,
+                                                               sample_reduction_mode='mean')}.items()
             if key in metrics}
 
 
-def make_callbacks(cfg, eval_key, metrics, writer, statistics, split):
+def make_callbacks(cfg, eval_key, metrics, writer, statistics, split, output_path):
     transform_chain_factory = hydra.utils.instantiate(cfg.data.transforms)
     transform_chain_factory = partial(transform_chain_factory,
                                       statistics=statistics,
@@ -103,7 +103,8 @@ def make_callbacks(cfg, eval_key, metrics, writer, statistics, split):
                                             L=1,
                                             metrics=metrics,
                                             count_2_dataset_iterables=count_2_iterable,
-                                            images_writer=writer),
+                                            images_writer=writer,
+                                            output_path=output_path),
                            period=cfg.callbacks['metric vs sample count'].period)
 
         callbacks.update({'metric vs sample count': callback})

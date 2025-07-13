@@ -291,7 +291,8 @@ def main(cfg: DictConfig) -> None:
                                               metrics=metrics,
                                               writer=valid_writer,
                                               statistics=statistics,
-                                              split='valid')
+                                              split='valid',
+                                              output_path=os.path.join(cfg.paths.workdir, 'valid'))
 
     train_iterable, steps_per_epoch = make_train_set_loader()
 

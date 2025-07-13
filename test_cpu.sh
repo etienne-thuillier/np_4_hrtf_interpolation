@@ -68,7 +68,7 @@ paths.experiment=${experiment} \
 echo ${python_command}
 
 sbatch \
---time=02:00:00 \
+--time=24:00:00 \
 --job-name=$job_name \
 --mem-per-cpu=24G \
 --cpus-per-task=4 \

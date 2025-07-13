@@ -1,6 +1,7 @@
 import heapq
 import logging
 import os
+import pickle
 from functools import partial
 from typing import Any, Dict, List, Tuple
 
@@ -335,12 +336,18 @@ def evaluate_at_sample_counts(rng, state, L, metrics, count_2_dataset):
     return [int(sample_count) for sample_count in count_2_dataset.keys()], m
 
 
-def plot_metrics_vs_sample_count(state, key, L, metrics, count_2_dataset_iterables, images_writer):
+def plot_metrics_vs_sample_count(state, key, L, metrics, count_2_dataset_iterables, images_writer, output_path):
     sample_counts, metrics = evaluate_at_sample_counts(rng=key,
                                                        state=state,
                                                        L=L,
                                                        metrics=metrics,
                                                        count_2_dataset=count_2_dataset_iterables)
+
+    # save result for offline plotting the case being
+    if output_path is not None:
+        for key, dataset in metrics.items():
+            with open(os.path.join(output_path, key.replace(' ', '_') + f"_{state.step}.pickle"), 'wb') as f:
+                pickle.dump(dict(sample_counts=sample_counts, metrics=metrics), f, protocol=pickle.HIGHEST_PROTOCOL)
 
     images = make_metric_vs_sample_count_graph(sample_counts=sample_counts, metrics=metrics)
 

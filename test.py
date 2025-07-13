@@ -101,7 +101,8 @@ def main(cfg: DictConfig) -> None:
                                               metrics=metrics,
                                               writer=test_writer,
                                               statistics=statistics,
-                                              split='test')
+                                              split='test',
+                                              output_path=os.path.join(cfg.paths.workdir, 'test'))
 
     logger.info('recovering checkpoint')
 
