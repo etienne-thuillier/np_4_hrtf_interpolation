@@ -239,6 +239,14 @@ def make_transform_chain_4_train_and_eval(target_sample_rate, n_taps, group_dela
 
         insert_dataset_statistics_ = []
 
+    if 'hrtf_magnitude' in ordered_key_list:
+
+        insert_hrtf_magnitude_ = [insert_hrtf_magnitude]
+
+    else:
+
+        insert_hrtf_magnitude_ = []
+
     return [to_cartesian_doa,
             to_unit_sphere,
             partial(resample, target_sample_rate=target_sample_rate),
@@ -248,6 +256,7 @@ def make_transform_chain_4_train_and_eval(target_sample_rate, n_taps, group_dela
             drop_nyquist,
             to_real_valued,
             add_spin_dimension,
+            *insert_hrtf_magnitude_,
             *insert_dataset_statistics_,
             partial(make_spherical_integration_weights,
                     spherical_integration_weights=spherical_integration_weights),
@@ -260,7 +269,16 @@ def make_transform_chain_4_train_and_eval(target_sample_rate, n_taps, group_dela
             partial(dict_to_list, ordered_key_list=ordered_key_list)]
 
 
-def make_transform_chain_4_statistics(target_sample_rate, n_taps, group_delay_frequency_range):
+def make_transform_chain_4_statistics(target_sample_rate, n_taps, group_delay_frequency_range, ordered_key_list=None):
+
+    if ordered_key_list is None:
+        ordered_key_list = ['x', 'complex_envelope']
+
+    if 'hrtf_magnitude' in ordered_key_list:
+        insert_hrtf_magnitude_ = [insert_hrtf_magnitude]
+    else:
+        insert_hrtf_magnitude_ = []
+
     return [to_cartesian_doa,
             to_unit_sphere,
             partial(resample, target_sample_rate=target_sample_rate),
@@ -270,7 +288,8 @@ def make_transform_chain_4_statistics(target_sample_rate, n_taps, group_delay_fr
             drop_nyquist,
             to_real_valued,
             add_spin_dimension,
-            partial(dict_to_list, ordered_key_list=['x', 'complex_envelope'])]
+            *insert_hrtf_magnitude_,
+            partial(dict_to_list, ordered_key_list=ordered_key_list)]
 
 
 def sofa_dataloader(sofa_dir, sofa_sets, split, cardinality, seed, transforms, batch_size,
@@ -340,11 +359,11 @@ def sofa_2_dict(datum):
 
 
 def to_time_aligned_hrtf(datum, sampling_rate, n_taps, group_delay_frequency_range):
-    pure_delay, complex_envelope = to_time_aligned_hrtf_helper(h=datum['hrir'],
-                                                               sampling_rate=sampling_rate,
-                                                               n_taps=n_taps,
-                                                               group_delay_frequency_range=group_delay_frequency_range)
-    return {'pure_delay': pure_delay, 'complex_envelope': complex_envelope, **datum}
+    hrtf, pure_delay, complex_envelope = to_time_aligned_hrtf_helper(h=datum['hrir'],
+                                                                     sampling_rate=sampling_rate,
+                                                                     n_taps=n_taps,
+                                                                     group_delay_frequency_range=group_delay_frequency_range)
+    return {'hrtf': hrtf, 'pure_delay': pure_delay, 'complex_envelope': complex_envelope, **datum}
 
 
 def to_real_valued(datum):
@@ -360,6 +379,7 @@ def to_real_valued(datum):
     datum['complex_envelope'] = format(datum['complex_envelope'])
     datum['pure_delay'] = format(datum['pure_delay'])
     datum['hrir'] = format(datum['hrir'])
+    datum['hrtf'] = format(datum['hrtf'])
 
     return datum
 
@@ -368,12 +388,18 @@ def add_spin_dimension(datum):
     datum['complex_envelope'] = np.expand_dims(datum['complex_envelope'], axis=-3)
     datum['pure_delay'] = np.expand_dims(datum['pure_delay'], axis=-3)
     datum['hrir'] = np.expand_dims(datum['hrir'], axis=-3)
+    datum['hrtf'] = np.expand_dims(datum['hrtf'], axis=-3)
 
     return datum
 
 
 def insert_dataset_statistics(datum, statistics):
     return {'mu_data': statistics['mu_data'], 'sigma_data': statistics['sigma_data'], **datum}
+
+
+def insert_hrtf_magnitude(datum):
+    assert datum['hrtf'].shape[-1] == 2, 'expecting trailing dimension of size 2 (real and imaginary parts)'
+    return {'hrtf_magnitude': np.sqrt(datum['hrtf'][..., :1] ** 2 + datum['hrtf'][..., 1:] ** 2), **datum}
 
 
 def make_spherical_integration_weights(datum, spherical_integration_weights):
@@ -419,7 +445,10 @@ def drop_nyquist(datum):
         raise NotImplementedError('need to drop nyquist in the mean and std dev arrays as well...')
     assert datum['complex_envelope'].shape[
                -1] % 2 == 1, 'expecting odd number of bins for positive frequency side of spectrum'
+    assert datum['hrtf'].shape[
+               -1] % 2 == 1, 'expecting odd number of bins for positive frequency side of spectrum'
     datum['complex_envelope'] = datum['complex_envelope'][..., :-1]
+    datum['hrtf'] = datum['hrtf'][..., :-1]
     return datum
 
 
@@ -655,9 +684,11 @@ def to_time_aligned_hrtf_helper(h, sampling_rate, n_taps, group_delay_frequency_
                 omegas = 2 * np.pi * np.arange(fftsize // 2 + 1) / fftsize
                 return np.exp(1j * omegas * pure_delay)
 
-        spectrum_envelope = ft(h, n=fftsize)[..., :fftsize // 2 + 1] * make_demodulating_phasor()
+        hrtf = ft(h, n=fftsize)[..., :fftsize // 2 + 1]
 
-        return spectrum_envelope
+        spectrum_envelope = hrtf * make_demodulating_phasor()
+
+        return hrtf, spectrum_envelope
 
     assert n_taps >= h.shape[-1], 'Expecting n_taps to introduce zeropadding, here it would truncate the hrir...'
 
@@ -670,12 +701,12 @@ def to_time_aligned_hrtf_helper(h, sampling_rate, n_taps, group_delay_frequency_
                                                                  mps_cutoff_dB=-40),
                                  axis=-1)
 
-    complex_envelope = demodulate(h=h,
-                                  pure_delay=pure_delay,
-                                  sample_rate=sampling_rate,
-                                  fftsize=n_taps)
+    hrtf, complex_envelope = demodulate(h=h,
+                                        pure_delay=pure_delay,
+                                        sample_rate=sampling_rate,
+                                        fftsize=n_taps)
 
-    return pure_delay, complex_envelope
+    return hrtf, pure_delay, complex_envelope
 
 
 def get_source_position_in_cartesian_coordinates_from_sofa(sofa_object):

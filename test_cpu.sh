@@ -9,16 +9,61 @@ experiment=$(date +"%Y%m%d%H%M%S")
 mkdir -p "${sessions}/${experiment}"
 
 ## barycentric
-#python_command="HYDRA_FULL_ERROR=1 python3 ${workdir}/np_4_hrtf_interpolation/test.py paths=triton trainer=default data=default callbacks=default model=barycentric jax.jax_disable_jit=true paths.sessions=${sessions} paths.experiment=${experiment} +checkpoint=null"
+#python_command="HYDRA_FULL_ERROR=1 \
+#python3 ${workdir}/np_4_hrtf_interpolation/test.py \
+#paths=triton \
+#trainer=default \
+#data=default \
+#callbacks=default \
+#model=barycentric \
+#jax.jax_disable_jit=true \
+#paths.sessions=${sessions} \
+#paths.experiment=${experiment} \
+#+checkpoint=null"
 
-# barycentric (non-centered features)
-python_command="HYDRA_FULL_ERROR=1 python3 ${workdir}/np_4_hrtf_interpolation/test.py paths=triton trainer=default data=default callbacks=default model=barycentric model.input_preprocessing=identity jax.jax_disable_jit=true paths.sessions=${sessions} paths.experiment=${experiment} +checkpoint=null"
+## barycentric (non-centered features)
+#python_command="HYDRA_FULL_ERROR=1 \
+#python3 ${workdir}/np_4_hrtf_interpolation/test.py \
+#paths=triton trainer=default \
+#data=default \
+#callbacks=default \
+#model=barycentric \
+#model.input_preprocessing=identity \
+#jax.jax_disable_jit=true \
+#paths.sessions=${sessions} \
+#paths.experiment=${experiment} \
+#+checkpoint=null"
 
-## spherical spline
-#python_command="HYDRA_FULL_ERROR=1 python3 ${workdir}/np_4_hrtf_interpolation/test.py paths=triton trainer=default data=default callbacks=default model=spherical_spline jax.jax_disable_jit=true paths.sessions=${sessions} paths.experiment=${experiment} +checkpoint=null"
+## barycentric (hrtf magnitude)
+#python_command="HYDRA_FULL_ERROR=1 python3 \
+#${workdir}/np_4_hrtf_interpolation/test.py \
+#paths=triton \
+#trainer=default \
+#data=default \
+#callbacks=default \
+#model=barycentric \
+#+data.transforms.ordered_key_list=[mask,w,x,hrtf_magnitude,mu_data,sigma_data] \
+#+data.transforms_4_statistics.ordered_key_list=[x,hrtf_magnitude] \
+#jax.jax_disable_jit=true \
+#paths.sessions=${sessions} \
+#paths.experiment=${experiment} \
+#+checkpoint=null"
 
-## spherical spline
-#python_command="HYDRA_FULL_ERROR=1 python3 ${workdir}/np_4_hrtf_interpolation/test.py paths=triton trainer=default data=default callbacks=default model=spherical_spline model.input_preprocessing=identity jax.jax_disable_jit=true paths.sessions=${sessions} paths.experiment=${experiment} +checkpoint=null"
+# barycentric (hrtf magnitude and non-centered features)
+python_command="HYDRA_FULL_ERROR=1 python3 \
+${workdir}/np_4_hrtf_interpolation/test.py \
+paths=triton \
+trainer=default \
+data=default \
+callbacks=default \
+model=barycentric \
+model.input_preprocessing=identity \
++data.transforms.ordered_key_list=[mask,w,x,hrtf_magnitude,mu_data,sigma_data] \
++data.transforms_4_statistics.ordered_key_list=[x,hrtf_magnitude] \
+jax.jax_disable_jit=true \
+paths.sessions=${sessions} \
+paths.experiment=${experiment} \
++checkpoint=null"
 
 echo ${python_command}
 

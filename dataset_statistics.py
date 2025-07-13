@@ -56,6 +56,7 @@ def make_dataset_statistics(train_set_loader, destination_path=None):
         sigma_data = tree_map(partial(constellation_flip_right_ear, x=x[:1]), sigma_data)
 
         # removing batch dimension
+        assert mu_data.shape[0] == 1 and sigma_data.shape[0] == 1
         mu_data = tree_map(lambda z: z[0], mu_data)
         sigma_data = tree_map(lambda z: z[0], sigma_data)
 
