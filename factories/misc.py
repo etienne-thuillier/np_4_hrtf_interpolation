@@ -6,7 +6,7 @@ import optax
 import callbacks as cb
 from callbacks import evaluate_uncertainty_miscalibration__helper
 from metrics import reduced_per_feature_metric, per_feature_negative_log_likelihood, \
-    per_feature_relative_error_db, per_feature_log_mag_distance_db
+    per_feature_relative_error_db, per_feature_log_mag_distance_db, per_location_log_spectral_distortion_db
 
 
 def make_optimizer_setup(n_epochs, steps_per_epoch, learning_rate_type, learning_rate, weight_decay, decay_rate=None):
@@ -44,7 +44,9 @@ def make_metrics(metrics, exclude_context_points_from_metrics, metric_reduction,
              'per-feature relative error (dB)': dict(per_feature_metric=per_feature_relative_error_db,
                                                      sample_reduction_mode='mean'),
              'per-feature log-mag distance (dB)': dict(per_feature_metric=per_feature_log_mag_distance_db,
-                                                       sample_reduction_mode='mean')}.items()
+                                                       sample_reduction_mode='mean'),
+             'per-filter log-spectral distortion (dB)': dict(per_feature_metric=per_location_log_spectral_distortion_db,
+                                                             sample_reduction_mode='mean')}.items()
             if key in metrics}
 
 

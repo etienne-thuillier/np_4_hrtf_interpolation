@@ -48,16 +48,15 @@ def per_feature_relative_error_db(y, mu, sigma=None, reduce_functor=lambda z: z)
     return 10.0 * (jnp.log10(reduce_functor(e2) + eps) - jnp.log10(reduce_functor(p) + eps))
 
 
-def ito_s_log_spectral_distortion(y, mu, sigma):
+def per_location_log_spectral_distortion_db(y, mu, sigma, sequence_axis=3, ear_axis=5):
     """
-    log-spectral distortion according to (9) in
+    log-spectral distortion, e.g. according to (9) in
 
     Ito - 2022 -    HEAD-RELATED TRANSFER FUNCTION INTERPOLATION FROM SPATIALLY SPARSE MEASUREMENTS USING AUTOENCODER
                     WITH SOURCE POSITION CONDITIONING
     """
 
-    assert len(y.shape) == 5, 'expecting features with shape (space, sequence, spin, channel, complex)'
-    assert y.shape == mu.shape
+    assert y.shape == mu.shape[1:]
 
     def power(z):
         return (z * jnp.conj(z)).real
@@ -71,10 +70,16 @@ def ito_s_log_spectral_distortion(y, mu, sigma):
     eps = jnp.finfo(p).eps
     metric = (10.0 * (jnp.log10(p_hat + eps) - jnp.log10(p + eps))) ** 2
 
-    # mean over frequency
-    metric = jnp.mean(metric, axis=1, keepdims=True)
+    # mean over sequence (i.e. frequency)
+    metric = jnp.mean(metric, axis=sequence_axis, keepdims=True)
 
-    return jnp.sqrt(metric)
+    metric = jnp.sqrt(metric)
+
+    # mean over ears
+    assert metric.shape[ear_axis] == 2
+    metric = jnp.mean(metric, axis=ear_axis, keepdims=True)
+
+    return metric
 
 
 def per_feature_log_mag_distance_db(y, mu, sigma=None, reduce_functor=lambda z: z):
@@ -114,7 +119,7 @@ def reduced_per_feature_metric(w, mask, y, mu, sigma, per_feature_metric, exclud
     """ returns a reduced (scalar value) for each entry in pytree y, corresponding to the per-subject average or sum
         (depending on setup) of the values returned by the specified per_feature_metric function
 
-        NB: assumes that leading dimension is sample, i.e. shape = (sample, ...)
+        NB: assumes that leading dimension is sample, i.e. shape = (sample, s^2 location, ...)
     """
 
     if exclude_context_points:
