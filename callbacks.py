@@ -345,9 +345,8 @@ def plot_metrics_vs_sample_count(state, key, L, metrics, count_2_dataset_iterabl
 
     # save result for offline plotting the case being
     if output_path is not None:
-        for key, dataset in metrics.items():
-            with open(os.path.join(output_path, key.replace(' ', '_') + f"_{state.step}.pickle"), 'wb') as f:
-                pickle.dump(dict(sample_counts=sample_counts, metrics=metrics), f, protocol=pickle.HIGHEST_PROTOCOL)
+        with open(os.path.join(output_path, f"metrics_vs_sample_count_{state.step}.pickle"), 'wb') as f:
+            pickle.dump(dict(sample_counts=sample_counts, metrics=metrics), f, protocol=pickle.HIGHEST_PROTOCOL)
 
     images = make_metric_vs_sample_count_graph(sample_counts=sample_counts, metrics=metrics)
 
