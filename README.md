@@ -6,7 +6,7 @@ This repository contains the official code for our paper:
 > Etienne Thuillier, Craig T. Jin, Vesa Välimäki  
 > *IEEE/ACM Transactions on Audio, Speech, and Language Processing, 2024*
 
-It includes an implementations of
+It includes an implementation of
 - the Spherical Convolutional Conditional Neural Process (**SConvCNP**) model proposed in the paper, and
 - the **barycentric interpolation** baseline.
 
@@ -70,7 +70,7 @@ curl http://research.spa.aalto.fi/publications/papers/ieee-taslp-2024-hrtf-inter
 Edit the following fields of ```conf/paths/default.yaml```
 ```
 data: <your dataset directory>
-sessions: <your sessions directory here>
+sessions: <your sessions directory>
 ```
 
 ### Environment
@@ -86,7 +86,7 @@ To train with the SConvCNP model under the published (i.e. default) configuratio
 ```
 python3 train.py
 ```
-This will create a new experiment folder in ```<your sessions directory here>``` where will model weights and tensorboard data will be saved.
+This will create a new experiment folder in ```<your sessions directory>``` where will model weights and tensorboard data will be saved.
 
 Note that training the published model requires 62 GB of GPU memory.
 
@@ -106,23 +106,23 @@ python3 train.py trainer=tiny data=tiny callbacks=tiny model=tiny jax=debug
 
 Download the pre-trained weights ***** under construction!
 ```
-cd <your sessions directory here> 
+cd <your sessions directory> 
 wget http://research.spa.aalto.fi/publications/papers/ieee-taslp-2024-hrtf-interp/*********
 ```
 Produce tensorboard output for test set
 ```
-python3 test.py --config-path=<your sessions directory here>/*********/.hydra --config-name=config.yaml paths.workdir=<your sessions directory here>/********* paths.experiment=********* +checkpoint=checkpoint_epoch4_step8 
+python3 test.py --config-path=<your sessions directory>/*********/.hydra --config-name=config.yaml paths.workdir=<your sessions directory>/********* paths.experiment=********* +checkpoint=checkpoint_epoch4_step8 
 ```
 Inspect the result
 ```
-tensorboard --logdir=<your sessions directory here>/*********
+tensorboard --logdir=<your sessions directory>/*********
 ```
 
 ### Barycentric interpolation (baseline)
 ```
 python3 test.py model=barycentric jax.jax_disable_jit=true +checkpoint=null
 ```
-This will create a new experiment folder in ```<your sessions directory here>```.
+This will create a new experiment folder in ```<your sessions directory>```.
 
 Note that the implementation of this baseline was carried-out with accuracy in mind, not efficiency.
 The approach is suboptimal in terms of computational complexity.
