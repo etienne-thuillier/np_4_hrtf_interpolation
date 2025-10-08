@@ -13,7 +13,7 @@ from jax.tree_util import tree_map
 def make_delaunay(voronoi):
     """ ... """
 
-    ''' cycle through the vertices of the vonoroi tessalation, creating a face for each vertex '''
+    ''' cycle through the vertices of the vonoroi tessalation, associating a face to each vertex '''
 
     faces = np.empty((voronoi.vertices.shape[0], 3), dtype=int)
 
@@ -89,7 +89,7 @@ def s2_2_mesh_location(vertices, faces, x_euclidian_on_S2):
 def make_subsampled_mesh(unit_sphere_locations):
     # voronoi = scipy.spatial.SphericalVoronoi(points=points[keep, :])
     voronoi = scipy.spatial.SphericalVoronoi(points=unit_sphere_locations)
-    voronoi.calculate_areas()
+    voronoi.calculate_areas()  # TODO: replace with voronoi.sort_vertices_of_regions() and test
 
     vertices, faces = make_delaunay(voronoi)
     faces = order_vertices(vertices, faces)

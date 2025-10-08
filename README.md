@@ -38,25 +38,38 @@ cd np_4_hrtf_interpolation
 ln -s ../google-research/spin_spherical_cnns spin_spherical_cnns
 ```
 
-### Dataset
+### Data
 
+##### HRTF sets
 Download simulated HRTF sets from the HUTUBS dataset:
 ```
-mkdir <your dataset directory here>/sofa
-cd <your dataset directory here>/sofa
+mkdir <your dataset directory>/sofa
+cd <your dataset directory>/sofa
 wget -r -np -nH --cut-dirs=2 -A "*_simulated.sofa" --wait=2 --retry-connrefused --tries=10 -c https://sofacoustics.org/data/database/hutubs/
 ``` 
 Check you have all required files.
 Running the following command should return 99.
 ```
-find <your dataset directory here>/sofa/hutubs -name "*_simulated.sofa" | wc -l
+find <your dataset directory>/sofa/hutubs -name "*_simulated.sofa" | wc -l
+```
+
+##### S2 grids
+Pre-compute the (nearly) uniform grids on the sphere:
+```
+python -m utilities.make_s2_grids
+mv /tmp/uniform_s2_grids <your dataset directory>/uniform_s2_grids.pickle
+```
+
+Alternatively, download the S2 grids that were used in the published experiments:
+```
+curl http://research.spa.aalto.fi/publications/papers/ieee-taslp-2024-hrtf-interp/uniform_s2_grids.pickle --output <your dataset directory>/uniform_s2_grids.pickle
 ```
 
 ### Paths
 
 Edit the following fields of ```conf/paths/default.yaml```
 ```
-data: <your dataset directory here>
+data: <your dataset directory>
 sessions: <your sessions directory here>
 ```
 
